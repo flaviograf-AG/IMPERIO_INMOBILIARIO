@@ -1,0 +1,12 @@
+[
+  { "id": "S-01", "name": "Boom Airbnb", "effects": { "turismo": 1, "costa": 1 } },
+  { "id": "S-02", "name": "Oficinas flojas", "effects": { "oficinas": -1 } },
+  { "id": "S-03", "name": "Puerto full", "effects": { "logistica": 1 } },
+  { "id": "S-04", "name": "Lima de noche", "effects": { "cultura": 1 } },
+  { "id": "S-05", "name": "Familias compran", "effects": { "residencial": 1 } },
+  { "id": "S-06", "name": "Burocracia al 200%", "effects": { "gobierno": -1 } },
+  { "id": "S-07", "name": "Turismo asustado", "effects": { "turismo": -1, "costa": -1 } },
+  { "id": "S-08", "name": "Rebote post-crisis", "effects": { "residencial": 1, "oficinas": 1 } },
+  { "id": "S-09", "name": "Flete caro", "effects": { "logistica": -1 } },
+  { "id": "S-10", "name": "Moda Barranco", "effects": { "cultura": 1, "turismo": 1 } }
+]

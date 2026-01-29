@@ -1,0 +1,37 @@
+[
+  {
+    "id": "E-053",
+    "title_es": "Anuncio de obras",
+    "type": "GLOBAL_TARGET",
+    "logic": "ACTIVATE_INFRA",
+    "description": "Se inician obras de infraestructura.",
+    "effects": { "duration": 2, "bias": "50% MarketRow, 50% OwnedMost" },
+    "headlines": ["Alcalde promete metro en 2 años (nadie le cree)", "Cierran avenidas por obras"]
+  },
+  {
+    "id": "E-051",
+    "title_es": "Expropiación Municipal",
+    "type": "TARGETED",
+    "logic": "EXPROPRIATION",
+    "condition": "DISTRICT_HAS_INFRA",
+    "effects": { "forceSell": true, "compensationRatio": 1.0 },
+    "fallback": "E-051B"
+  },
+  {
+    "id": "E-051B",
+    "title_es": "Aviso de derecho de vía",
+    "type": "TARGETED",
+    "effects": { "cash": -1, "tradeLock": 2 },
+    "headlines": ["Municipalidad marca fachadas con spray rojo"]
+  },
+  {
+    "id": "E-045",
+    "title_es": "Incendio",
+    "type": "INCIDENT",
+    "effects": { "cash": -3, "rentDelta": -2, "fame": -1 },
+    "mitigation": {
+      "INSURANCE_BASIC": { "cash": -1, "rent": -1, "fame": 0 },
+      "INSURANCE_FULL": { "cash": 0, "rent": -1, "fame": 0 }
+    }
+  }
+]

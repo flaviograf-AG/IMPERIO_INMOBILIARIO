@@ -1,0 +1,23 @@
+[
+  {
+    "id": "C-01",
+    "name": "General Orden",
+    "slogan": "Mano dura, pero con licencia",
+    "meters": { "Security": 1, "ConstructionEnforcement": 1 },
+    "weightMods": { "Extortion": -10, "Licencias": 10 }
+  },
+  {
+    "id": "C-02",
+    "name": "Tecnocrata Pro",
+    "slogan": "Estabilidad, por favor",
+    "meters": { "BCRP": 1, "InterestRates": -1, "PoliticalStability": 1 },
+    "weightMods": {}
+  },
+  {
+    "id": "C-03",
+    "name": "Shock Reformista",
+    "slogan": "Corta la grasa",
+    "meters": { "PoliticalStability": 1, "InterestRates": 1, "Inflation": -1 },
+    "weightMods": { "Prensa": 10 }
+  }
+]

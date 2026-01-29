@@ -1,0 +1,14 @@
+{
+  "ui": {
+    "error_no_cash": "No te alcanza, causa.",
+    "error_busy": "El jugador está ocupado.",
+    "btn_develop": "Desarrollar",
+    "btn_insure": "Asegurar",
+    "btn_busy_mode": "Modo Concentrado",
+    "tray_title": "Ofertas",
+    "lbl_rumor": "Correr el rumor",
+    "status_sold": "ADJUDICADO",
+    "status_obra": "OBRA",
+    "disclaimer": "Los nombres de dinastías se usan solo como fantasía/sátira. No hay afiliación ni representación de personas u organizaciones reales."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "PARODY": [
+    "Brecha", "Romerazo", "Gloriaz", "Intercopia", "Hochi", "Benavidios",
+    "Arias V", "Navarro G", "Marsanito", "Lindlitas", "Fishmanazo",
+    "Acunazo", "Dayer", "Mulderon", "Mattita", "Ananos", "Ananos J"
+  ],
+  "REAL_LABEL": [
+    "Brescia", "Romero", "Rodríguez", "Intercorp", "Hochschild", "Benavides",
+    "Arias Vargas", "Navarro Grau", "Marsano", "Lindley", "Fishman",
+    "Acuña", "Dyer", "Mulder", "Matta", "Añaños", "Añaños Jerí"
+  ]
+}
