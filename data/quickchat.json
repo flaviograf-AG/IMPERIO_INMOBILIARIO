@@ -1,0 +1,14 @@
+[
+  { "id": "QC-01", "text_es": "Quiero hacer un trato", "hasDistrictParam": false },
+  { "id": "QC-02", "text_es": "No me interesa", "hasDistrictParam": false },
+  { "id": "QC-03", "text_es": "Vamos juntos", "hasDistrictParam": false },
+  { "id": "QC-04", "text_es": "Ojo con ese", "hasDistrictParam": false },
+  { "id": "QC-05", "text_es": "Buena jugada", "hasDistrictParam": false },
+  { "id": "QC-06", "text_es": "Estoy en la ruina", "hasDistrictParam": false },
+  { "id": "QC-07", "text_es": "Eso no vale", "hasDistrictParam": false },
+  { "id": "QC-08", "text_es": "Vamos a ganar", "hasDistrictParam": false },
+  { "id": "QC-09", "text_es": "Socorro", "hasDistrictParam": false },
+  { "id": "QC-10", "text_es": "No me toquen", "hasDistrictParam": false },
+  { "id": "QC-11", "text_es": "Hagamos negocio en {DISTRITO}", "hasDistrictParam": true },
+  { "id": "QC-12", "text_es": "jajaja", "hasDistrictParam": false }
+]

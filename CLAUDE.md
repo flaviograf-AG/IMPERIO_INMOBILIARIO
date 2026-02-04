@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPERIO INMOBILIARIO** — viral multiplayer real estate tycoon game set in Lima, Peru. Players bid on properties, manage portfolios, deal with market shocks, and build dynasties in 7-14 round matches.
 
-**Current Status**: Specification stage (v11.2 finalized). No source code yet — implementation pending.
+**Current Status**: Specification stage (v12.0 finalized). No source code yet — implementation pending.
 
 ## Technology Stack
 
@@ -14,37 +14,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |-------|------------|
 | Server | Colyseus (authoritative state, rooms, WebSocket) on Node.js 20+ |
 | Client | Godot 4.x (web export via WebAssembly) |
-| Database | PostgreSQL (match snapshots as JSONB) |
+| Database | PostgreSQL (match snapshots as JSONB + Graf Dollar ledger) |
 | Cache | Redis (optional: rate limiting, sessions) |
 | Languages | TypeScript strict mode (server), GDScript/GodotJS (client) |
 
 ## Master Spec Navigation
 
-The spec (`imperio_master_spec_v11.md`, 4,591 lines) is the single source of truth. Use these line ranges to jump directly:
+The spec (`imperio_master_spec_v11.md`, v12.0) is the single source of truth. Key sections:
 
-| Lines | Section | What You'll Find |
-|-------|---------|------------------|
-| 30-74 | Part 1 | Design philosophy, hard constraints |
-| 76-158 | Part 2 | Game modes (Quick/Standard/Long), starting values |
-| 160-252 | Part 3 | Roles (Owner/Watcher), identity, viral systems |
-| 298-547 | Part 5 | **Core loop, 11-phase state machine, all phase details** |
-| 550-629 | Part 6 | Economy: Wealth/Rent/OpsCost formulas, forced sales |
-| 631-755 | Part 7 | Actions (Develop/Insure/PR/etc.) and Deal templates |
-| 756-886 | Part 8 | Targeted event system, RiskScore, fairness caps |
-| 930-975 | Part 10 | Press system, headline generation |
-| 1011-1067 | Part 11 | Server architecture, DB tables, infra setup |
-| 1069-1127 | Part 12 | Security: phase gating, validation, rate limits, reconnection |
-| 1134-1332 | **A1** | **TypeScript interfaces — authoritative types** |
-| 1334-1355 | A2 | Deal engine rules (deterministic resolution) |
-| 1356-1389 | A3 | Full state machine diagram |
-| 1486-1542 | A8 | Bot heuristics (tutorial/autopilot) |
-| 1543-1688 | **A9** | **Colyseus + Godot integration code examples** |
-| 1691-2358 | B | Complete 52+ event deck (YAML) with headlines |
-| 2360-2445 | C | UI acceptance criteria, Visual Ledger animation spec |
-| 2548-2656 | F | Networking protocol: envelope structure, message types, delta packets |
-| 2659-3163 | **V** | **Visual spec: "Tycoon Luxury" style, UI kit, map, typography, colors** |
-| 3166-3584 | O | Open source foundation evaluation |
-| 3586-4591 | G | AI asset generation pipeline, prompts, batch workflows |
+| Section | What You'll Find |
+|---------|------------------|
+| Part 1 | Design philosophy, hard constraints |
+| Part 2 | Game modes (Quick/Standard/Long), starting values (GD 500K/650K/800K) |
+| Part 3 | Roles (Owner/Watcher), Quick Chat, identity, viral systems, leaderboard |
+| Part 5 | **Core loop, 11-phase state machine, Major/Minor action split, MOOD full spec** |
+| Part 6 | Economy: GD-scale formulas (Wealth/Rent/OpsCost/Package bonuses), forced sales |
+| Part 7 | Actions (Develop/Package/Insure/PR/etc.), 7 Deal templates, Smart Suggestions, Property Packaging |
+| Part 8 | Targeted event system, RiskScore, GD fairness caps (150K max) |
+| Part 13 | **Graf Dollar Metagame: persistent wallet, leaderboard tiers, seasonal decay, dynasty rankings** |
+| A1 | TypeScript interfaces — PropertyPackage, MoodOption, QuickChatMessage types |
+| A7 | **25-property deck with GD values (200K-2M range)** |
+| A8 | Bot heuristics with GD thresholds |
+| A9 | Colyseus + Godot integration code examples |
+| B | Complete 52+ event deck with GD cash amounts |
+| F | Networking protocol: PACKAGE, QUICK_CHAT, SELL_PACKAGE messages |
+| V | Visual spec: "Tycoon Luxury" style, GD currency bills |
 
 ## Core Architecture
 
@@ -58,7 +52,7 @@ On election rounds, `VOTE` replaces `MOOD`. Full state: `LOBBY → MATCH_INIT �
 1. Resolve bids (auction winners)
 2. Apply Income (rent + signals + ops + debt + leader tax)
 3. Visual Ledger animation (4.0s, client-side, server waits)
-4. Collect actions
+4. Collect actions (1 Major + 0-1 Minor)
 5. Resolve Mood/Vote (queued effects)
 6. Resolve deals (post-action ownership is authoritative)
 7. Select targets and resolve events (apply fairness caps)
@@ -67,23 +61,28 @@ On election rounds, `VOTE` replaces `MOOD`. Full state: `LOBBY → MATCH_INIT �
 
 Server proceeds regardless of client response. Timeouts: no bid = no bid, no action = Pass, no vote = not counted.
 
-### Key Formulas
+### Key Formulas (GD Scale)
 ```
-Wealth = Cash + Σ(PropertyWorth) − Debt
-PropertyWorth = BasePrice + (UpgradeLevel × 2) + WorthBonuses
-Rent = BaseRent + (UpgradeLevel × 2) + DistrictSetBonus + MarketSignalBonus + TempRentBonus
-OpsCost = floor((NumProperties + TotalUpgrades) / 4)
+Wealth = Cash + Σ(PropertyWorth) - Debt
+PropertyWorth = BasePrice + (UpgradeLevel × 40,000) + WorthBonuses + PackageWorthBonus
+Rent = BaseRent + (UpgradeLevel × 12,000) + DistrictSetBonus + SignalBonus + TempBonus + PackageRentBonus
+OpsCost = floor((NumProperties + TotalUpgrades) / 4) × 8,000
 ```
-District set bonus: +1 rent per property when 2+ owned in same district.
+District set bonus: +GD 5,000 rent per property when 2+ owned in same district.
+
+### Currency: Graf Dollar (GD)
+- **In-match**: All players start equal (GD 500K/650K/800K by mode). Properties range GD 200K-2M.
+- **Persistent**: Match final Wealth → lifetime wallet for leaderboard ranking (prestige-only, no in-match advantage).
+- **Ledger**: Double-entry system per `graf_dollar.txt`. Tables: `ledger_tx`, `ledger_entry`, `balance_cache`.
 
 ### Satellite Data Strategy
-Game configuration externalized to `data/` JSON files — allows balance updates without client rebuild. Files: `events.json` (52+ events), `signals.json` (10 market signals), `elections.json` (3 candidates), `teams.json` (17 PARODY + 17 REAL_LABEL dynasties), `locales_es.json` (Spanish UI strings).
+Game configuration externalized to `data/` JSON files — allows balance updates without client rebuild. Files: `properties.json` (25 properties), `events.json` (52+ events), `signals.json` (10 market signals), `elections.json` (4 candidates), `moods.json` (8 mood options), `quickchat.json` (12 presets), `teams.json` (17 PARODY + 17 REAL_LABEL dynasties), `locales_es.json` (Spanish UI strings).
 
 ### Security Model
 - **JIT round seed**: `roundSeed = sha256(matchSeed + serverSecret + roundNumber)` — `serverSecret` NEVER sent to client
 - **Idempotency**: All client messages include UUID `idempotencyKey`; server rejects duplicates
 - **Phase gating**: Server rejects actions outside correct phase
-- **Rate limits**: 1 bid/action/deal/vote per round, 1 rumor per match, 5 reconnect attempts/min
+- **Rate limits**: 1 bid/action/deal/vote per round, 1 rumor per match, 2 quick chats per phase, 5 reconnect attempts/min
 
 ## Hard Constraints (Cannot Change)
 
@@ -94,7 +93,8 @@ Game configuration externalized to `data/` JSON files — allows balance updates
 | Events | Targeted at single Owner (probability scales with properties/wealth/fame) |
 | Insurance | Must have cost AND benefit |
 | Catch-up mechanics | Mandatory (leader friction tax, fairness caps) |
-| Deals | Template-only: 6 types, no free-form |
+| Deals | Template-only: 7 types, no free-form |
+| Currency | Graf Dollar (GD) — prestige leaderboard, no in-match advantage from persistent wallet |
 | Graf Design System | Admin UI only |
 | Public rooms | Viewable; profiles unlisted by default |
 
@@ -112,17 +112,17 @@ Flavor tags: `premium_area`, `corredor_obra`, `zona_caliente`
 ## Implementation Patterns
 
 ### Colyseus State Schema
-Use `@colyseus/schema` decorators. Key schemas: `OwnerSchema`, `PropertySchema`, `ImperioState`. See spec A9 (line 1587) for complete examples.
+Use `@colyseus/schema` decorators. Key schemas: `OwnerSchema`, `PropertySchema`, `ImperioState`. See spec A9 for complete examples.
 
 ### Colyseus Room
-`ImperioRoom extends Room<ImperioState>` with `maxClients = 20`. Message handlers: `"bid"`, `"action"`. Reconnection: allow 60s, then autopilot via bot heuristics (A8).
+`ImperioRoom extends Room<ImperioState>` with `maxClients = 20`. Message handlers: `"bid"`, `"action"`, `"package"`, `"quick_chat"`. Reconnection: allow 60s, then autopilot via bot heuristics (A8).
 
 ### Godot Client
-WebSocket connection to Colyseus. Signals: `state_changed`, `phase_changed`. Handles `STATE_SNAPSHOT`, `PHASE_CHANGE`, and `OP_DELTA` message types. Mobile text inputs use HTML DOM overlays (not Godot virtual keyboard).
+WebSocket connection to Colyseus. Signals: `state_changed`, `phase_changed`. Handles `STATE_SNAPSHOT`, `PHASE_CHANGE`, `OP_DELTA`, `QUICK_CHAT_MSG`, `PACKAGE_CREATED` message types. Mobile text inputs use HTML DOM overlays (not Godot virtual keyboard).
 
 ### Networking Protocol (Appendix F)
-Envelope: `{ type, payload, ts, idempotencyKey }`. Delta packets (`OP_DELTA`) use `{ op, id, val }` format for efficient state updates.
+Envelope: `{ type, payload, ts, idempotencyKey }`. Delta packets (`OP_DELTA`) use `{ op, id, val }` format. New ops: `SET_PACKAGE`, `ADD_PACKAGE`, `REMOVE_PACKAGE`.
 
 ## Visual Style
 
-"Tycoon Luxury" — semi-realistic Lima cityscape, high-contrast UI with gold/bronze metallics. Full visual spec in Appendix V (line 2659+).
+"Tycoon Luxury" — semi-realistic Lima cityscape, high-contrast UI with gold/bronze metallics. Graf Dollar bills in 3 denominations (GD 50K, 100K, 500K). Full visual spec in Appendix V.

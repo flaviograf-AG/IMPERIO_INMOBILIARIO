@@ -1,14 +1,47 @@
-# IMPERIO INMOBILIARIO — Unified Master Specification v11
+# IMPERIO INMOBILIARIO — Unified Master Specification v12
 
-**Version:** 11.0
-**Date:** 2026-01-29
-**Status:** Golden Master (Consolidated from v9 + v10)
+**Version:** 12.0
+**Date:** 2026-02-04
+**Status:** Golden Master (v11 + Graf Dollar Economy + Weakness Fixes)
 
 ---
 
-## CHANGELOG (v10 → v11)
+## CHANGELOG (v11 → v12)
 
-### Merged from v10
+### Economy Overhaul
+- **Graf Dollar (GD) currency**: All in-match values scaled to tycoon-realistic amounts (GD 200K-2M properties)
+- **Persistent GD wallet**: Match final Wealth → lifetime leaderboard ranking (prestige-only, no in-match advantage)
+- **Leaderboard system**: Tiered leagues (Inquilino → Emperador), seasonal decay, dynasty rankings
+- **Formula recalibration**: All formulas updated to GD scale (Wealth, Rent, OpsCost, costs)
+
+### Content Expansion
+- **Property deck**: Expanded from 13 to 25 properties with portfolio-concept theming
+- **Property Packaging**: New "Paquete Inmobiliario" mechanic — group 3+ properties for synergy bonuses
+- **MOOD phase**: Full specification with 8 mood options, Owner fallback when 0 Watchers, tie-breaking rules
+- **Quick Chat**: 12 preset Spanish phrases for in-match communication
+
+### Gameplay Fixes
+- **Major/Minor action split**: Pick 1 Major + 0-1 Minor per round (doubles decision space)
+- **Quick Mode Mini-Election**: R5 mini-election with 2 candidates
+- **R1 Consolation Rule**: GD 50,000 subsidy for Owners with 0 properties after R1
+- **Smart Deal Suggestions**: Server-generated contextual deal offers
+- **Deal template #7**: SELL_PACKAGE for selling entire property packages
+- **Sound fix**: sfx_cash_loss changed to orchestral sting (matches Tycoon Luxury aesthetic)
+
+### New Data Files
+- `data/properties.json` — 25 properties with GD values and packageCategory
+- `data/moods.json` — 8 mood options with effects
+- `data/quickchat.json` — 12 preset Spanish phrases
+
+### New Spec Sections
+- **Part 13**: Graf Dollar Metagame Economy (persistent wallet, leaderboard, leagues, seasonal decay)
+
+### Previous Changelogs
+
+<details>
+<summary>v10 → v11</summary>
+
+#### Merged from v10
 - **Architecture**: Satellite Data strategy (external JSON in `/data/`)
 - **UX**: Visual Ledger phase (`VISUAL_LEDGER`) between INCOME and ACTION
 - **UI**: Deal Tray (non-blocking) + "Modo Ocupado" (Busy Mode)
@@ -16,7 +49,7 @@
 - **Network**: Delta packets (`OP_DELTA`)
 - **AI**: Bot heuristics for Tutorial/Autopilot (Appendix A8)
 
-### New in v11
+#### New in v11
 - **Open Source Foundation Matrix** with repository references
 - **Viral Gaming Best Practices** (2025-2026 research)
 - **Complete 52+ Event Deck** with Spanish headlines
@@ -24,6 +57,8 @@
 - **Referral Mechanics** documentation
 - **Watcher Betting** on auctions
 - **Phase Timing Diagrams**
+
+</details>
 
 ---
 
@@ -57,9 +92,11 @@
 | Events | Targeted at single Owner (probability scales with properties/wealth/fame) |
 | Insurance | Has cost AND benefit |
 | Catch-up mechanics | Mandatory |
-| Deals | Template-only (no free-form) |
+| Deals | Template-only: 7 types, no free-form |
 | Graf Design System | Admin UI only |
 | Public rooms | Viewable; profile shares unlisted by default |
+| Currency | Graf Dollar (GD) — prestige leaderboard currency; no in-match advantage from persistent wallet |
+| Match fairness | All players start with identical GD per mode; persistent wallet has zero in-match effect |
 
 ## 1.5 Open Source Foundation Strategy
 
@@ -90,9 +127,10 @@ timers:
 marketRowSize: 5
 targetedEventSlots: 1 (+1 if Owners ≥ 9)
 globalShockCap: 1
-elections: none
+elections: [R5]  # Mini-Election (2 candidates, simplified)
 specialRounds:
   R3: Guerra de Distrito
+  R5: Mini-Eleccion
   R6: Ventana Bancaria
 ```
 
@@ -146,14 +184,20 @@ specialRounds:
 
 ## 2.3 Starting Values by Mode
 
+All players in a match start with identical resources — no persistent-wallet influence.
+
 | Resource | Quick | Standard | Long |
 |----------|-------|----------|------|
-| Cash | 9 | 10 | 11 |
+| Cash | GD 500,000 | GD 650,000 | GD 800,000 |
 | Debt | 0 | 0 | 0 |
 | Fame | 0 | 0 | 0 |
 | Compliance | 1 | 1 | 1 |
 | Political Exposure | 0 | 0 | 0 |
-| Debt Cap | 10 | 10 | 10 |
+| Debt Cap | GD 750,000 | GD 750,000 | GD 750,000 |
+
+**What 500K buys in Quick:** 2 entry properties (200K+250K=450K, GD 50K left) OR 1 mid-range (500K, GD 0 left). Players must choose between breadth (multiple cheap) or concentration (one strong asset).
+
+**Game arc:** R1-R2 buy entry-level (200-400K). R3-R5 accumulate rent, bid on mid/upper tier. R6-R7 premium properties are aspirational targets requiring loans + accumulated wealth.
 
 ---
 
@@ -168,12 +212,36 @@ specialRounds:
 
 **Per-Round Actions:**
 - One bid (on one property)
-- One action (Develop/Deal/Insure/etc.)
+- One Major action (Develop/Package/Deal/Pass)
+- One Minor action, optional (Insure/Security/PR/Compliance Audit)
 - One deal offer (outgoing)
 
 **Per-Match Limits:**
-- One "Romper Pacto" (break pact)
+- One "Romper Pacto" (break pact) — consumes both Major and Minor slots
 - One "Yape de emergencia" (Fame→Cash conversion)
+
+### 3.2.1 Quick Chat ("Mensajes Rapidos")
+
+12 preset Spanish phrases for in-match communication. Defined in `data/quickchat.json`.
+
+| ID | Phrase |
+|----|--------|
+| QC-01 | Quiero hacer un trato |
+| QC-02 | No me interesa |
+| QC-03 | Vamos juntos |
+| QC-04 | Ojo con ese |
+| QC-05 | Buena jugada |
+| QC-06 | Estoy en la ruina |
+| QC-07 | Eso no vale |
+| QC-08 | Vamos a ganar |
+| QC-09 | Socorro |
+| QC-10 | No me toquen |
+| QC-11 | Hagamos negocio en {DISTRITO} |
+| QC-12 | jajaja |
+
+**Rate limit:** 2 messages per phase per Owner.
+**Display:** Speech bubble above avatar, fades after 3s.
+**Protocol:** Client sends `SUBMIT_QUICK_CHAT` with `{ phraseId, districtParam? }`. Server broadcasts `QUICK_CHAT_MSG` to all clients.
 
 ## 3.3 Watchers
 
@@ -248,6 +316,15 @@ Brescia, Romero, Rodríguez, Intercorp, Hochschild, Benavides, Arias Vargas, Nav
 - **Streak Multiplier**: Day 2 = 1.5x, Day 3 = 2x, Day 7+ = 3x
 - **Streak Break**: Resets to Day 1 after 48h without login
 
+### 3.5.6 Leaderboard System (NEW in v12)
+
+Lifetime GD leaderboard with tiered leagues. See **Part 13** for full specification.
+
+- **5 league tiers**: Inquilino → Propietario → Inversionista → Magnate → Emperador
+- **Monthly seasonal decay**: balances > GD 5M decay 10% monthly
+- **Dynasty leaderboard**: aggregate team GD (strongest viral hook — recruit friends)
+- **Contextual views**: Friends, Regional (Lima districts), Dynasty, All-time
+
 ---
 
 # PART 4: ONBOARDING & TIME-TO-FUN
@@ -273,7 +350,7 @@ setup: 1 Human vs 2-3 Bots
 ```
 
 **Scripted Outcomes:**
-- **Round 1**: User wins a cheap auction with suggested bid (Bot heuristics: bid 1)
+- **Round 1**: User wins a cheap auction with suggested bid (Bot heuristics: bid GD 50,000)
 - **Round 2**: User targeted by mild event; sees insurance mitigate it
 
 **Constraints:**
@@ -290,7 +367,7 @@ See **Appendix A8** for complete bot logic. Key Tutorial behaviors:
 
 | Round | Bot Behavior |
 |-------|--------------|
-| R1 | Always bid 1 (ensures human wins) |
+| R1 | Always bid GD 50,000 (ensures human wins) |
 | R2 | Do not mitigate event (shows insurance value) |
 
 ---
@@ -328,10 +405,10 @@ REVEAL → BID → INCOME_CALC → VISUAL_LEDGER → ACTION → VOTE → DEALS �
 │   UI animates Income Receipt                                            │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ ACTION (25-40s based on mode)                                           │
-│   Players choose: Develop/Deal/Insure/Security/PR/Audit/Pass           │
+│   Major: Develop/Package/Deal/Pass + Minor (opt): Insure/Security/PR/Audit │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ MOOD or VOTE (15s)                                                      │
-│   Watchers vote on Mood modifier OR Election candidate                  │
+│ MOOD or VOTE (15s; 10s if 0 Watchers)                                   │
+│   Watchers (or Owners if 0 Watchers) vote on Mood modifier OR Election  │
 ├─────────────────────────────────────────────────────────────────────────┤
 │ DEALS (instant)                                                         │
 │   Resolve accepted deals deterministically                              │
@@ -420,12 +497,20 @@ function tieBreak(roundSeed: string, propertyId: string, tiedOwnerIds: string[])
 ## 5.6 INCOME_CALC Phase (Server-Side, Instant)
 
 Server calculates in order:
-1. Rent income (with Market Signals)
-2. Operating costs (portfolio overhead)
+1. Rent income (with Market Signals) — GD amounts per property
+2. Operating costs (portfolio overhead) — GD 8,000 per unit
 3. Debt service
-4. Leader friction tax ("Impuesto a la fama")
+4. Leader friction tax ("Impuesto a la fama") — GD 8,000/15,000
 5. Scheduled effects (loan repayments, etc.)
 6. Forced sales if cash < 0
+
+### 5.6.1 R1 Consolation Rule ("Subsidio de arranque")
+
+If an Owner owns **0 properties** at end of R1 INCOME_CALC, grant **GD 50,000**.
+
+- One-time, R1 only
+- Headline: *"{OWNER} recibe subsidio municipal para arrancar."*
+- Rationale: 50K = 10% of starting cash (500K Quick). Enough to cover insurance or development costs but not enough to close the gap on someone who bought a property.
 
 ## 5.7 VISUAL_LEDGER Phase (NEW in v10)
 
@@ -437,43 +522,105 @@ Server calculates in order:
 - Lock ACTION input buttons
 - Display animated Income Receipt:
   ```
-  ┌────────────────────────┐
-  │  Rentas:      +$8  🟢  │
-  │  Costos:      -$2  🔴  │
-  │  ─────────────────     │
-  │  Total:       +$6      │
-  │  [Cash counter animates]│
-  └────────────────────────┘
+  ┌──────────────────────────────┐
+  │  Rentas:    +GD 95,000  🟢   │
+  │  Costos:    -GD 16,000  🔴   │
+  │  ──────────────────────      │
+  │  Total:     +GD 79,000       │
+  │  [Cash counter animates]     │
+  └──────────────────────────────┘
   ```
 
 **Constraint**: Players CANNOT click Action buttons until animation completes.
 
-## 5.8 ACTION Phase
+## 5.8 ACTION Phase (Major/Minor Split)
 
-Choose **exactly one**:
+Choose **one Major action** plus **zero or one Minor action**:
+
+### Major Actions (pick 1)
 
 | Action | Cost | Effect |
 |--------|------|--------|
-| Develop | 3-5 (meter-dependent) | +2 rent permanently |
+| Develop | GD 60,000-100,000 (meter-dependent) | +GD 12,000 rent permanently, +GD 40,000 worth |
+| Package | GD 40,000 | Create "Paquete Inmobiliario" from 3+ owned properties (see 7.9) |
 | Deal (offer) | 0 | Propose template deal |
-| Insure | 1-3 | Add/upgrade insurance |
-| Security Contract | 1 | Protection until end of next round |
+| Pass | 0 | Do nothing |
+
+### Minor Actions (pick 0 or 1)
+
+| Action | Cost | Effect |
+|--------|------|--------|
+| Insure | GD 20,000-60,000 | Add/upgrade insurance |
+| Security Contract | GD 20,000 | Protection until end of next round |
 | PR Push | 0 | +1 Fame, +0.5 RiskScore next round |
 | Compliance Audit | 0 | +1 Compliance, -0.5 RiskScore next round |
-| Romper Pacto | 0 | Cancel active pact (once per match) |
-| Pass | 0 | Do nothing |
+
+### Special: Romper Pacto
+- Cost: 0 (consumes both Major AND Minor slots)
+- Effect: Cancel active pact (once per match)
+
+This Major/Minor split doubles decision space without adding time: you can now Develop AND Insure, or Deal AND PR Push in the same round.
 
 ## 5.9 MOOD Phase (Non-Election Rounds)
 
-Watchers vote between 2 options (one tap).
+### 5.9.1 Mood Option Generation
+
+Server picks **2 mood options** per round from `data/moods.json` (8 total). Selection rules:
+- One positive/beneficial, one negative/disruptive
+- No repeats in consecutive rounds
+
+### 5.9.2 Mood Options
+
+| ID | Name | Effect |
+|----|------|--------|
+| M-01 | Boom de alquileres | All rent +GD 10,000 next round |
+| M-02 | Miedo al mercado | All rent -GD 10,000 next round |
+| M-03 | Fiebre inversora | Develop cost -GD 30,000 next round |
+| M-04 | Vecinos molestos | All RiskScore +0.3 next round |
+| M-05 | Calma chicha | Suppress 1 event next round |
+| M-06 | Prensa hambrienta | Fame gains/losses ×2 next round |
+| M-07 | Ojo fiscalizador | High-compliance owners (≥2) get +GD 20,000 bonus next round |
+| M-08 | Gentrificacion express | Properties under GD 400,000 get +GD 12,000 rent next round |
+
+### 5.9.3 Voting
+
+**When Watchers present (≥1):** Watchers vote between 2 options (one tap, 15s timer).
 - Winning modifier queued to apply next round
 - Optional: show live percentages (host option)
+
+**When 0 Watchers (Owner fallback):** Owners vote on mood options instead.
+- Timer reduced to **10s**
+- Same voting rules apply
+- Each Owner gets one vote
+
+### 5.9.4 Tie-Breaking
+
+1. Higher vote count wins
+2. If tied: positive-delta option wins (the one that benefits players)
+3. If still tied: deterministic coin flip using `roundSeed`
+
+### 5.9.5 MoodOption Schema
+
+```typescript
+interface MoodOption {
+  id: string;           // "M-01"
+  nombre_es: string;    // "Boom de alquileres"
+  effect: {
+    type: "RENT_ALL" | "DEVELOP_COST" | "RISK_ALL" | "SUPPRESS_EVENT" | "FAME_MULTIPLIER" | "COMPLIANCE_BONUS" | "RENT_TIER";
+    delta?: number;
+    multiplier?: number;
+    threshold?: number;  // for RENT_TIER: basePrice threshold
+    duration: number;    // rounds
+  };
+  sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+}
+```
 
 ## 5.10 VOTE Phase (Election Rounds)
 
 **Owners choose:**
-- Candidate A or B
-- Contribution: 0/1/2 cash (counts as "support points")
+- Candidate A or B (or C in Standard/Long)
+- Contribution: GD 0 / GD 25,000 / GD 50,000 (counts as "support points")
 
 **Watchers vote:**
 - Candidate A or B (one tap)
@@ -494,7 +641,16 @@ else:
 
 **Effects:**
 - Winner bundle applies for **next 2 rounds** (meters + weight shifts)
-- Any Owner contributing >0 increases Political Exposure by +1 (max 3)
+- Any Owner contributing > GD 0 increases Political Exposure by +1 (max 3)
+
+### 5.10.2 Quick Mode Mini-Election (R5)
+
+Simplified election for Quick Mode:
+- **2 candidates** (not 3) — server picks 2 from `data/elections.json`
+- **Contribution:** GD 0 or GD 25,000 only (simplified tier)
+- **Bundle duration:** 1 round (instead of 2)
+- **Timer:** 15s
+- This gives Quick Mode a political moment without the full weight of Standard/Long elections
 
 ## 5.11 DEALS Phase
 
@@ -523,6 +679,7 @@ Mandatory "moment density" events:
 | Mode | Round | Event |
 |------|-------|-------|
 | Quick | R3 | Guerra de Distrito |
+| Quick | R5 | Mini-Eleccion |
 | Quick | R6 | Ventana Bancaria |
 | Standard | R3 | Guerra de Distrito |
 | Standard | R5 | Ventana Bancaria |
@@ -537,8 +694,13 @@ Mandatory "moment density" events:
 - Market Row biased to one district
 - Completing a set this round grants +1 Fame
 
+**Mini-Eleccion (Quick R5):**
+- 2 candidates, simplified contributions (GD 0 or GD 25,000)
+- Bundle lasts 1 round only
+- See 5.10.2
+
 **Ventana Bancaria:**
-- Loan improves: +4 now (instead of +3), repay -5 (instead of -4+)
+- Loan improves: +GD 200,000 now (instead of +GD 150,000), repay total still Principal + GD 30,000 + (InterestRates × GD 15,000)
 - Media/Scandal event weight +10%
 
 **Subasta de Prestigio:**
@@ -553,8 +715,8 @@ Mandatory "moment density" events:
 
 | Resource | Range | Description |
 |----------|-------|-------------|
-| Cash | 0+ | Liquid money |
-| Debt | 0-10 | Owed money (cap 10) |
+| Cash | GD 0+ | Liquid money (Graf Dollar) |
+| Debt | GD 0-750,000 | Owed money (cap GD 750,000) |
 | Fame | 0+ | Media attention / reputation |
 | Compliance | 0-3 | Regulatory standing |
 | Political Exposure | 0-3 | Government attention |
@@ -564,35 +726,40 @@ Mandatory "moment density" events:
 ```
 Wealth = Cash + Σ(PropertyWorth) − Debt
 
-PropertyWorth = BasePrice + (UpgradeLevel × 2) + WorthBonuses
+PropertyWorth = BasePrice + (UpgradeLevel × 40,000) + WorthBonuses + PackageWorthBonus
 ```
 
 **WorthBonuses** include:
-- Infrastructure corridor bonus (+2 while active)
+- Infrastructure corridor bonus (+GD 100,000 while active)
 - Temporary worth bonuses from events
+- **PackageWorthBonus**: +GD 75,000 if property is in an active Package (see 7.9)
 
 ## 6.3 Rent Calculation
 
 ```
 Rent = BaseRent
-     + (UpgradeLevel × 2)
+     + (UpgradeLevel × 12,000)
      + DistrictSetBonus
      + MarketSignalBonus
      + TemporaryRentBonus
+     + PackageRentBonus
 ```
 
 ### 6.3.1 District Set Bonus
-2+ properties in same district: **+1 rent per property** in that district.
+2+ properties in same district: **+GD 5,000 rent per property** in that district.
 
 ### 6.3.2 Market Signal Bonus
-Each signal modifies rent by tag (±1 per property, per-property cap ±1).
+Each signal modifies rent by tag (±GD 3,000 per property per matching tag, per-property cap ±GD 3,000).
+
+### 6.3.3 Package Rent Bonus
+Properties in an active Package: **+GD 6,000 rent per property** in the package (see 7.9).
 
 ## 6.4 Market Signals (Tycoon Layer)
 
 Each round reveals 2 signals. Signals defined in `data/signals.json`.
 
-| ID | Name | Effects |
-|----|------|---------|
+| ID | Name | Tag Effects (units) |
+|----|------|---------------------|
 | S-01 | Boom Airbnb | turismo +1, costa +1 |
 | S-02 | Oficinas flojas | oficinas -1 |
 | S-03 | Puerto full | logistica +1 |
@@ -605,48 +772,51 @@ Each round reveals 2 signals. Signals defined in `data/signals.json`.
 | S-10 | Moda Barranco | cultura +1, turismo +1 |
 
 **Rule**: No repeat of same signal in consecutive rounds.
+**GD conversion**: Each signal unit = ±GD 3,000 per matching tag per property (server applies).
 
 ## 6.5 Operating Costs (Portfolio Overhead)
 
 ```
-OpsCost = floor((NumProperties + TotalUpgrades) / 4)
+OpsCost = floor((NumProperties + TotalUpgrades) / 4) × 8,000
 ```
+
+Properties in a Package count as `ceil(count/2)` toward NumProperties for OpsCost (efficiency bonus).
 
 Applied during INCOME phase.
 
 ## 6.6 Leader Friction ("Impuesto a la fama")
 
 Applied during INCOME phase:
-- Top Wealth quartile: pay +1 cash
-- #1 Wealth pays +2 cash if `Wealth > 1.2 × Wealth(#2)`
+- Top Wealth quartile: pay **GD 8,000**
+- #1 Wealth pays **GD 15,000** if `Wealth > 1.2 × Wealth(#2)`
 
 ## 6.7 Forced Sales
 
 If cash < 0 after Income:
-1. Sell lowest-basePrice property at 80% basePrice
+1. Sell lowest-basePrice property at **80% BasePrice**
 2. Repeat until cash ≥ 0 or no properties remain
 
 ---
 
 # PART 7: ACTIONS & DEALS
 
-## 7.1 Develop Action (Wired to Construction Enforcement)
+## 7.1 Develop Action (Major — Wired to Construction Enforcement)
 
-**Base cost**: 3 cash
+**Base cost**: GD 60,000
 
 **Meter wiring**:
 ```
-DevelopCost = 3 + floor((ConstructionEnforcement + 1) / 2)
+DevelopCost = 60,000 + floor((ConstructionEnforcement + 1) / 2) × 20,000
 ```
 
-| Enforcement Level | Cost |
-|-------------------|------|
-| 0 | 3 |
-| 1 | 4 |
-| 2 | 4 |
-| 3 | 5 |
+| Enforcement Level | Cost (GD) |
+|-------------------|-----------|
+| 0 | 60,000 |
+| 1 | 80,000 |
+| 2 | 80,000 |
+| 3 | 100,000 |
 
-**Effect**: +2 rent permanently. Adds +0.05 RiskScore next round.
+**Effect**: +GD 12,000 rent permanently, +GD 40,000 to PropertyWorth. Adds +0.05 RiskScore next round.
 
 ## 7.2 Deal System (Template-Only, Server-Enforced)
 
@@ -655,7 +825,7 @@ DevelopCost = 3 + floor((ConstructionEnforcement + 1) / 2)
 - One counter-offer maximum
 - Offers expire at end of DEALS phase
 
-### 7.2.2 Deal Templates (6 Types)
+### 7.2.2 Deal Templates (7 Types)
 
 | ID | Template | Description |
 |----|----------|-------------|
@@ -665,21 +835,44 @@ DevelopCost = 3 + floor((ConstructionEnforcement + 1) / 2)
 | 4 | Election Pact | Support candidate for payment |
 | 5 | Non-compete | No bid in district for payment |
 | 6 | Security Escort | Protection for payment |
+| 7 | Sell Package | Sell entire property package as one transaction (see 7.9) |
 
 ### 7.2.3 Bank Loan (Wired to InterestRates)
 
-**Principal**: +3 cash now (+4 during Ventana Bancaria)
+**Principal**: +GD 150,000 now (+GD 200,000 during Ventana Bancaria)
 
 **Repayment** (scheduled for next INCOME):
 ```
-Repay = Principal + 1 + InterestRates
+Repay = Principal + 30,000 + (InterestRates × 15,000)
 ```
 - `InterestRates` captured at loan time
 - Record `scheduledRepayAmount` and `scheduledRepayRound`
 
+| InterestRates | Repay (Normal) | Repay (Ventana) |
+|---------------|----------------|-----------------|
+| 0 | GD 180,000 | GD 230,000 |
+| 1 | GD 195,000 | GD 245,000 |
+| 2 | GD 210,000 | GD 260,000 |
+| 3 | GD 225,000 | GD 275,000 |
+
 **Default**:
 - If cannot pay: amount converts to Debt
 - Fame -1 with headline "Deudor moroso"
+
+### 7.2.6 Smart Deal Suggestions
+
+Server generates pre-filled deal templates as contextual suggestions:
+
+| Trigger Condition | Suggested Deal |
+|-------------------|---------------|
+| Another Owner has a property completing your district set | CASH_FOR_PROPERTY |
+| Your cash < DevelopCost and you have upgradable properties | BANK_LOAN |
+| 2+ Owners target same district repeatedly | NON_COMPETE |
+| You own a Package and another Owner wants entry to that category | SELL_PACKAGE |
+
+- Appear as one-tap "Oferta sugerida" cards in Deal Tray
+- Player can modify amounts before sending
+- Server generates max 2 suggestions per round per Owner
 
 ### 7.2.4 Deal Tray UI (v10 Fix)
 
@@ -712,26 +905,26 @@ Repay = Principal + 1 + InterestRates
 - RiskScore +1.0 next round
 - Triggers trophy: `A-BET-01 "Rompiste el Pacto"`
 
-## 7.4 Insurance (Property-Level)
+## 7.4 Insurance (Minor Action — Property-Level)
 
-| Upgrade Path | Cost |
-|--------------|------|
-| None → Basic | 1 |
-| Basic → Full | 2 |
-| None → Full | 3 |
+| Upgrade Path | Cost (GD) |
+|--------------|-----------|
+| None → Basic | 20,000 |
+| Basic → Full | 40,000 |
+| None → Full | 60,000 |
 
 Mitigation effects defined in Appendix B4.
 
-## 7.5 Security Contract (Owner-Level)
+## 7.5 Security Contract (Minor Action — Owner-Level)
 
-**Cost**: 1 cash
+**Cost**: GD 20,000
 **Duration**: Until end of next round
 
 **Mitigation**:
-- Extortion severity -1
+- Extortion cash effect reduced by GD 50,000
 - Blocks Fame loss from extortion cards
 
-## 7.6 PR / Compliance Actions
+## 7.6 PR / Compliance Actions (Minor)
 
 | Action | Effect |
 |--------|--------|
@@ -742,14 +935,72 @@ Mitigation effects defined in Appendix B4.
 
 | Option | Cost | Effect | Limit |
 |--------|------|--------|-------|
-| Yape de emergencia | 2 Fame | +1 cash | Once per match |
-| Control de daños | 2 Fame | Reduce event cash penalty by 1 | Per event |
+| Yape de emergencia | 2 Fame | +GD 60,000 cash | Once per match |
+| Control de daños | 2 Fame | Reduce event cash penalty by GD 50,000 | Per event |
 | Cortina de humo | 3 Fame | Cancel one Fame loss | Per event |
 
 ## 7.8 Error Messages (Spanish)
 
 If action requires cash you don't have:
 > **"No te alcanza, causa."**
+
+## 7.9 Property Packaging ("Paquete Inmobiliario")
+
+### 7.9.1 Concept
+
+Group 3+ property cards under a management umbrella to create a consolidated portfolio competitive with expensive individual properties. This is **player-level** packaging (grouping cards for synergy), distinct from the **card-level** portfolio framing (entry cards like "Portafolio 5 Depas" already represent bundled units thematically).
+
+### 7.9.2 Requirements
+
+**Action type:** Major action `PACKAGE` during ACTION phase.
+
+**Conditions:**
+- Own 3+ properties sharing a `packageCategory`:
+  - `RESIDENTIAL_BUNDLE`: 3+ properties with `residencial` tag
+  - `LOGISTICS_HUB`: 3+ properties with `logistica` tag
+  - `COMMERCIAL_STRIP`: 3+ properties with `oficinas` or `cultura` tag
+- No property already in another package
+- Cost: GD 40,000
+
+### 7.9.3 Effects
+
+| Effect | Value |
+|--------|-------|
+| Rent bonus per property in package | +GD 6,000 |
+| Wealth bonus (package worth) | +GD 75,000 |
+| OpsCost efficiency | Properties count as `ceil(count/2)` toward NumProperties |
+| Unlocks | Deal template #7: SELL_PACKAGE |
+
+### 7.9.4 Dissolution
+
+- Selling or losing any property in the package dissolves it immediately
+- Cannot reform a package for **2 rounds** after dissolution
+
+### 7.9.5 Strategic Analysis
+
+**"Many cheap" with packaging:**
+3 entry properties: P-01 (200K) + P-03 (250K) + P-04 (280K) = GD 730K + 40K fee = GD 770K total.
+Rent: (30K + 35K + 38K) + 18K synergy = GD 121,000/round. OpsCost: 0.
+
+**"One premium" strategy:**
+P-13 Edificio Surquillo: GD 750K. Rent: 75,000/round. OpsCost: 0.
+
+Package generates 61% more rent but exposes 3 properties to events (higher RiskScore). Higher reward, higher variance.
+
+### 7.9.6 TypeScript Interface
+
+```typescript
+interface PropertyPackage {
+  packageId: Id;
+  ownerId: Id;
+  category: "RESIDENTIAL_BUNDLE" | "LOGISTICS_HUB" | "COMMERCIAL_STRIP";
+  propertyIds: Id[];
+  createdRound: number;
+  rentBonusPerProperty: number;  // 6,000
+  worthBonus: number;            // 75,000
+  dissolvedRound?: number;       // if dissolved, when
+}
+```
 
 ---
 
@@ -790,7 +1041,7 @@ RiskScore =
 
 ```
 FameTier = floor(Fame / 3)  // 0-3
-WealthTier = floor(Wealth / 15)  // 0-3 typical
+WealthTier = floor(Wealth / 500,000)  // 0-3 typical (GD scale)
 ```
 
 ## 8.2 Event Category Weights
@@ -810,13 +1061,13 @@ Special rounds can shift weights:
 
 | Cap | Rule |
 |-----|------|
-| Round cash damage | Max 4 cash per Owner; overflow becomes rent penalty |
+| FairnessCap | Max GD 150,000 cash damage per Owner per round; overflow becomes rent penalty |
 | Expropriation | Max 1 per Owner per match |
 | Global shocks | Mode cap; never >1 per 3 rounds |
 | Double-target | No same Owner targeted twice in one round |
 | Mercy rule | 0 properties → cannot be hit by property-loss events |
-| Hard-hit spacing | Max 1 event with cash loss ≥3 per 2-round window |
-| Scandal bias | ≥60% of Prensa events are Fame-heavy (cash ≤1) |
+| HardHitSpacing | Max 1 event with cash loss ≥ GD 100,000 per 2-round window |
+| Scandal bias | ≥60% of Prensa events are Fame-heavy (cash ≤ GD 50,000) |
 
 ## 8.4 AutoChoice (Keep Gameplay Fast)
 
@@ -847,8 +1098,8 @@ else:
 
 **While INF active on district**:
 - `enablesExpropriation = true`
-- Rent +1 for properties in district
-- Worth +2 for properties in district
+- Rent +GD 5,000 for properties in district
+- Worth +GD 100,000 for properties in district
 - MapView shows animated corridor ("METRO" / "VIA")
 
 ### 8.5.2 E-053 "Anuncio de obras"
@@ -877,7 +1128,7 @@ else:
 ### 8.5.4 E-051B "Aviso de derecho de vía" (Fallback)
 
 **Effects**:
-- Cash -1
+- Cash -GD 50,000
 - `tradeLockedUntilRound = currentRound + 2` on random owned property
 
 **Headline theme**: Blueprint/"trazo"
@@ -899,7 +1150,9 @@ else:
 
 ## 9.2 Election Candidates
 
-Defined in `data/elections.json`. Bundles apply for 2 rounds after election.
+Defined in `data/elections.json`. Bundles apply for 2 rounds after election (1 round for Quick Mode Mini-Elections).
+
+**Contribution tiers:** GD 0 / GD 25,000 / GD 50,000 (Quick Mode: GD 0 / GD 25,000 only).
 
 ### 9.2.1 Candidate Examples
 
@@ -1125,6 +1378,118 @@ function generateRoundSeed(matchSeed: string, roundNumber: number): string {
 
 ---
 
+# PART 13: GRAF DOLLAR METAGAME ECONOMY
+
+## 13.1 Currency Model — Prestige Leaderboard
+
+**Core principle:** Graf Dollar (GD) is a **prestige currency for lifetime wealth ranking**. It does NOT grant in-match advantage. Matches are always fair — everyone starts equal.
+
+| Layer | How It Works |
+|-------|-------------|
+| **In-match** | All players start with identical GD (500K/650K/800K by mode). Match plays normally. At match end, final Wealth is calculated. |
+| **Persistent Wallet** | Match outcomes ADD GD to your lifetime balance. Tracked in PostgreSQL double-entry ledger per `graf_dollar.txt`. |
+| **Leaderboard** | Ranked by accumulated lifetime GD. Players display any custom name they choose. Dynasty name shown alongside. |
+
+**What GD is for:**
+- Lifetime wealth leaderboard ranking (primary prestige driver)
+- Display name + dynasty branding on the public ladder
+- Optional cosmetic unlocks (badges, crests, titles)
+- Player-to-player transfers/loans (Phase 2/3 per graf_dollar.txt)
+
+**What GD is NOT for:**
+- Buying in-match advantages
+- Starting with more cash than other players
+- Unlocking stronger properties or actions
+- Any pay-to-win mechanic
+
+## 13.2 Match-to-Wallet Flow
+
+At match end, each player's final in-match Wealth is converted to persistent GD and credited to their wallet via the ledger system.
+
+| Outcome | Persistent GD Earned |
+|---------|---------------------|
+| Final Wealth (always) | Your end-of-match Wealth added to wallet |
+| 1st place bonus | +GD 200,000 |
+| 2nd place bonus | +GD 100,000 |
+| 3rd place bonus | +GD 50,000 |
+| Achievement unlock | +GD 20,000-100,000 depending on rarity |
+
+**Design rationale:** Awarding actual final Wealth (not just flat bonuses) means every in-match decision matters for the leaderboard. A 1st-place finish with GD 3M Wealth earns massively more than a 1st-place with GD 1M. This incentivizes aggressive, high-Wealth play.
+
+**Ledger Architecture:** Uses `ledger_tx` + `ledger_entry` double-entry system from `graf_dollar.txt`. Match rewards are `tx_type='award'` with `idempotency_key='award:{match_id}:{user_id}:wealth'`. System account mints all GD.
+
+**New player welcome:** GD 0 starting balance. No GD needed to play.
+
+## 13.3 Leaderboard System
+
+### 13.3.1 Tiered Leagues
+
+| League | GD Threshold | Badge Color |
+|--------|-------------|-------------|
+| Inquilino (Tenant) | 0 - 999,999 | Gray |
+| Propietario (Owner) | 1,000,000 - 9,999,999 | Bronze |
+| Inversionista (Investor) | 10,000,000 - 49,999,999 | Silver |
+| Magnate | 50,000,000 - 199,999,999 | Gold |
+| Emperador (Emperor) | 200,000,000+ | Diamond |
+
+**Threshold rationale:** Average Quick Mode final Wealth ~ GD 800K-1.5M. Winner ~ GD 2-3M. Propietario requires ~1-5 matches. Inversionista ~10-30. Magnate ~50-100. Emperador ~150+ matches of strong play.
+
+### 13.3.2 Seasonal Decay
+
+- Monthly soft reset: all balances above GD 5,000,000 decay by 10%
+- Forces active play to maintain ranking
+- Season rewards: top 100 get exclusive cosmetic badge
+
+### 13.3.3 Contextual Views
+
+| View | Description |
+|------|-------------|
+| Friends | Compare against your circle |
+| Regional | Lima districts — ties into game theme |
+| Dynasty | Aggregate GD of all players in same dynasty |
+| All-time | Permanent hall of fame |
+
+### 13.3.4 Social Display
+
+GD balance and league badge shown on:
+- Profile card
+- Portada share cards (end-of-match)
+- Lobby player list
+- Quick Chat name tag
+
+**Virality angle:** The Dynasty leaderboard is the strongest viral hook — players recruit friends into their dynasty to climb the collective rankings. This aligns with the referral system (Section 3.5.4).
+
+## 13.4 Cosmetic Spending (Never Gameplay Advantage)
+
+| Phase | Available Spending |
+|-------|-------------------|
+| Phase 1 (MVP) | Profile badges, team crests, custom titles |
+| Phase 2 | Player-to-player GD transfers (gifting, alliance signaling) |
+| Phase 3 | Player-to-player GD loans (social contracts) |
+
+## 13.5 Database Integration
+
+### 13.5.1 New/Updated Tables
+
+| Table | Source | Purpose |
+|-------|--------|---------|
+| `ledger_tx` | graf_dollar.txt §4.1.1 | Transaction header (award, transfer, purchase, etc.) |
+| `ledger_entry` | graf_dollar.txt §4.1.2 | Double-entry lines (sum = 0 per tx) |
+| `balance_cache` | graf_dollar.txt §4.1.3 | Derived balance for performance |
+| `loan_contract` | graf_dollar.txt §4.1.4 | Phase 3 player loans |
+
+### 13.5.2 Idempotency Keys
+
+| Operation | Key Format |
+|-----------|-----------|
+| Match wealth award | `award:{match_id}:{user_id}:wealth` |
+| Placement bonus | `award:{match_id}:{user_id}:placement:{rank}` |
+| Achievement bonus | `award:{match_id}:{user_id}:achievement:{achievement_id}` |
+| Transfer | `xfer:{sender_id}:{client_request_id}` |
+| Cosmetic purchase | `buy:{user_id}:{order_id}` |
+
+---
+
 # APPENDICES
 
 ---
@@ -1191,16 +1556,63 @@ interface PropertyState {
   nombre_es: string;
   district: string;
   tags: string[];
-  basePrice: number;
-  baseRent: number;
+  basePrice: number;       // GD (e.g. 200000)
+  baseRent: number;        // GD (e.g. 30000)
   upgradeSlotsMax: 0 | 1 | 2;
   upgradeLevel: 0 | 1 | 2;
   insurance: InsuranceLevel;
   buildQuality: BuildQuality;
   ownerId?: Id;
+  packageId?: Id;          // v12: if part of a PropertyPackage
+  packageCategory?: PackageCategory;  // v12: eligible package type
   tempRentBonus?: Array<{ delta: number; untilRound: number }>;
   tempWorthBonus?: Array<{ delta: number; untilRound: number }>;
   tradeLockedUntilRound?: number;
+}
+
+// === Property Package (v12) ===
+type PackageCategory = "RESIDENTIAL_BUNDLE" | "LOGISTICS_HUB" | "COMMERCIAL_STRIP";
+
+interface PropertyPackage {
+  packageId: Id;
+  ownerId: Id;
+  category: PackageCategory;
+  propertyIds: Id[];
+  createdRound: number;
+  rentBonusPerProperty: number;  // 6,000
+  worthBonus: number;            // 75,000
+  dissolvedRound?: number;
+}
+
+// === Mood Option (v12) ===
+type MoodEffectType =
+  | "RENT_ALL"
+  | "DEVELOP_COST"
+  | "RISK_ALL"
+  | "SUPPRESS_EVENT"
+  | "FAME_MULTIPLIER"
+  | "COMPLIANCE_BONUS"
+  | "RENT_TIER";
+
+interface MoodOption {
+  id: Id;
+  nombre_es: string;
+  effect: {
+    type: MoodEffectType;
+    delta?: number;
+    multiplier?: number;
+    threshold?: number;
+    duration: number;
+  };
+  sentiment: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+}
+
+// === Quick Chat (v12) ===
+interface QuickChatMessage {
+  phraseId: string;       // "QC-01"
+  fromOwnerId: Id;
+  districtParam?: string; // for QC-11
+  timestamp: number;
 }
 
 // === Deal State ===
@@ -1210,7 +1622,8 @@ type DealTemplateId =
   | "BANK_LOAN"
   | "ELECTION_PACT"
   | "NON_COMPETE"
-  | "SECURITY_ESCORT";
+  | "SECURITY_ESCORT"
+  | "SELL_PACKAGE";  // v12: sell entire property package
 
 type DealStatus =
   | "PENDING"
@@ -1276,6 +1689,7 @@ interface MatchStateSnapshot {
 
   owners: OwnerState[];
   properties: PropertyState[];
+  packages: PropertyPackage[];  // v12
   deals: DealState[];
 
   marketRow: Id[];
@@ -1284,11 +1698,8 @@ interface MatchStateSnapshot {
     nombre_es: string;
     tagMods: Record<string, number>;
   }>;
-  moodOptions?: Array<{
-    id: Id;
-    nombre_es: string;
-    effect: any;
-  }>;
+  moodOptions?: MoodOption[];  // v12: typed
+  activeMoodEffect?: MoodOption;  // v12: currently active mood
   electionOptions?: Array<{
     id: Id;
     nombre_es: string;
@@ -1301,8 +1712,8 @@ interface MatchStateSnapshot {
     infraId: string;
     district: string;
     untilRound: number;
-    rentDelta: number;
-    worthDelta: number;
+    rentDelta: number;     // GD 5,000
+    worthDelta: number;    // GD 100,000
     enablesExpropriation: boolean;
   }>;
 
@@ -1455,33 +1866,56 @@ See `data/properties.json` for authoritative source.
 ```typescript
 interface Property {
   id: string;           // "P-01"
-  nombre_es: string;    // "Depa Miraflores Vista"
-  district: string;     // "Miraflores"
-  tags: string[];       // ["residencial", "costa", "premium_area"]
-  basePrice: number;    // 8
-  baseRent: number;     // 3
+  nombre_es: string;    // "Portafolio Depas Los Olivos"
+  district: string;     // "Independencia/Los Olivos"
+  tags: string[];       // ["residencial"]
+  basePrice: number;    // 200000 (GD)
+  baseRent: number;     // 30000 (GD)
   upgradeSlotsMax: 0 | 1 | 2;
   buildQuality: "STANDARD" | "PREMIUM";
+  packageCategory?: "RESIDENTIAL_BUNDLE" | "LOGISTICS_HUB" | "COMMERCIAL_STRIP";
 }
 ```
 
-### Initial Property Deck (13 Properties)
+**Property card concept:** Each card represents a **real estate operation**, not necessarily a single unit. Lower-end cards represent bundled portfolios of smaller assets (e.g., "Portafolio 5 Depas Los Olivos" = five apartments packaged as one investment card). Higher-end cards represent individual trophy assets (e.g., "Torre Financiera" = one floor of a premium office tower). All cards work identically in-game.
 
-| ID | Name | District | Tags | Price | Rent | Slots |
-|----|------|----------|------|-------|------|-------|
-| P-01 | Depa Miraflores Vista | Miraflores | residencial, costa, premium_area | 8 | 3 | 2 |
-| P-02 | Oficina San Isidro Prime | San Isidro | oficinas, gobierno, premium_area | 9 | 3 | 2 |
-| P-03 | Loft Barranco | Barranco | cultura, turismo, costa | 7 | 3 | 1 |
-| P-04 | Local Jesus Maria | Jesus Maria/Lince | residencial, gobierno | 6 | 2 | 1 |
-| P-05 | Almacen Callao | Callao | logistica, zona_caliente | 6 | 2 | 1 |
-| P-06 | Casa Surco Familiar | Surco | residencial | 7 | 2 | 2 |
-| P-07 | Depa La Molina | La Molina | residencial, premium_area | 7 | 2 | 2 |
-| P-08 | Tienda San Miguel | Magdalena/San Miguel | residencial, costa | 6 | 2 | 1 |
-| P-09 | Casona Centro Historico | Centro | gobierno, cultura | 5 | 2 | 1 |
-| P-10 | MiniDepa Chorrillos | Chorrillos | residencial, costa | 5 | 2 | 1 |
-| P-11 | Depa Los Olivos | Independencia/Los Olivos | residencial | 4 | 2 | 1 |
-| P-12 | Local Ate | Ate/SJL | logistica, residencial | 4 | 2 | 1 |
-| P-20 | Torre Financiera | San Isidro | oficinas, gobierno, premium_area | 10 | 4 | 2 |
+### Expanded Property Deck (25 Properties)
+
+**Tier structure:** Entry (200K-400K, ~13-15% yield, 7 properties), Mid (450K-750K, ~10-12% yield, 6 properties), Upper (800K-1.3M, ~8-10% yield, 7 properties), Premium (1.5M-2M, ~6.5-7.5% yield, 5 properties).
+
+| ID | Name | District | Tags | Price (GD) | Rent (GD) | Slots |
+|----|------|----------|------|------------|-----------|-------|
+| P-01 | Portafolio Depas Los Olivos | Independencia/Los Olivos | residencial | 200,000 | 30,000 | 1 |
+| P-02 | Mini-Locales San Juan | Ate/SJL | logistica, residencial | 220,000 | 32,000 | 1 |
+| P-03 | Lotes Puente Piedra | Independencia/Los Olivos | residencial | 250,000 | 35,000 | 1 |
+| P-04 | Depas Costa Chorrillos | Chorrillos | residencial, costa | 280,000 | 38,000 | 1 |
+| P-05 | Galeria Comercial Centro | Centro | cultura, gobierno | 300,000 | 40,000 | 1 |
+| P-06 | Depas Pueblo Libre | Pueblo Libre | residencial, cultura | 350,000 | 45,000 | 1 |
+| P-07 | Taller Automotriz Chorrillos | Chorrillos | logistica, costa | 400,000 | 50,000 | 1 |
+| P-08 | Strip Mall Lince | Jesus Maria/Lince | residencial, gobierno | 450,000 | 55,000 | 1 |
+| P-09 | Bodega Industrial Ate | Ate/SJL | logistica | 500,000 | 60,000 | 1 |
+| P-10 | Portafolio Depas San Miguel | Magdalena/San Miguel | residencial, costa | 550,000 | 65,000 | 1 |
+| P-11 | Casona Restaurada Barranco | Barranco | cultura, turismo | 600,000 | 66,000 | 1 |
+| P-12 | Almacen Callao Puerto | Callao | logistica, zona_caliente | 700,000 | 73,000 | 2 |
+| P-13 | Edificio Surquillo | Surquillo | residencial | 750,000 | 75,000 | 2 |
+| P-14 | Casa Residencial Surco | Surco | residencial | 800,000 | 76,000 | 2 |
+| P-15 | Loft Artistico Barranco | Barranco | cultura, turismo, costa | 850,000 | 80,000 | 2 |
+| P-16 | Residencial La Molina | La Molina | residencial, premium_area | 900,000 | 82,000 | 2 |
+| P-17 | Depa Vista Mar Miraflores | Miraflores | residencial, costa, premium_area | 1,000,000 | 90,000 | 2 |
+| P-18 | Oficina Miraflores | Miraflores | oficinas, costa | 1,100,000 | 95,000 | 2 |
+| P-19 | Centro Logistico Callao | Callao | logistica, zona_caliente | 1,200,000 | 100,000 | 2 |
+| P-20 | Edificio Residencial Surco | Surco | residencial | 1,300,000 | 104,000 | 2 |
+| P-21 | Oficina San Isidro Prime | San Isidro | oficinas, gobierno, premium_area | 1,500,000 | 112,000 | 2 |
+| P-22 | Penthouse Barranco | Barranco | residencial, cultura, costa | 1,600,000 | 115,000 | 2 |
+| P-23 | Casa La Molina Grande | La Molina | residencial, premium_area | 1,700,000 | 119,000 | 2 |
+| P-24 | Penthouse San Isidro | San Isidro | residencial, premium_area | 1,800,000 | 122,000 | 2 |
+| P-25 | Torre Financiera San Isidro | San Isidro | oficinas, gobierno, premium_area | 2,000,000 | 130,000 | 2 |
+
+**Tag distribution:** residencial (15), logistica (5), cultura (5), oficinas (3), costa (7), turismo (3), gobierno (4), premium_area (6), zona_caliente (2).
+
+**District set bonus opportunities (2+ in same district):** Independencia/Los Olivos (2), Ate/SJL (2), Chorrillos (2), Barranco (3), Callao (2), Surco (2), La Molina (2), Miraflores (2), San Isidro (3).
+
+**Deck sizing:** 25 properties / 5 per Market Row = 5 rounds without reshuffling (covers Quick Mode).
 
 ## A8: Bot Heuristics (NEW in v10)
 
@@ -1490,11 +1924,11 @@ interface Property {
 ### H1: Economy Safety
 ```typescript
 function shouldPass(bot: OwnerState): boolean {
-  return bot.cash < 2;
+  return bot.cash < 100_000;  // GD 100K reserve
 }
 
 function maxBid(bot: OwnerState): number {
-  return Math.max(0, bot.cash - 2);
+  return Math.max(0, bot.cash - 100_000);  // Keep GD 100K reserve
 }
 ```
 
@@ -1502,13 +1936,13 @@ function maxBid(bot: OwnerState): number {
 ```typescript
 function calculateBid(bot: OwnerState, property: PropertyState): number {
   const valuation = property.basePrice + (property.baseRent * 2);
-  const maxAffordable = bot.cash - 1;
+  const maxAffordable = bot.cash - 50_000;  // Keep GD 50K minimum
   return Math.min(valuation, maxAffordable);
 }
 
 // Tutorial Override
 function tutorialBid(round: number): number {
-  if (round === 1) return 1;  // Always lose to human
+  if (round === 1) return 50_000;  // Always lose to human (bid below cheapest property)
   return calculateBid(this, property);
 }
 ```
@@ -1527,16 +1961,24 @@ function handleEventChoice(cost: number, penalty: number): string {
 
 ### H5: Action Selection
 ```typescript
-function selectAction(bot: OwnerState): string {
-  if (bot.cash < 2) return "PASS";
+function selectAction(bot: OwnerState): { major: string; minor?: string } {
+  if (bot.cash < 100_000) return { major: "PASS" };
 
-  // Simple priority: Develop if affordable
-  const developCost = getDevelopCost();
+  // Major: Develop if affordable
+  const developCost = getDevelopCost();  // GD 60K-100K
+  let major = "PASS";
   if (bot.cash >= developCost && bot.properties.length > 0) {
-    return "DEVELOP";
+    major = "DEVELOP";
   }
 
-  return "PASS";
+  // Minor: Insure if we have uninsured properties and enough cash
+  let minor: string | undefined;
+  const hasUninsured = bot.properties.some(p => getProperty(p).insurance === "NONE");
+  if (hasUninsured && bot.cash >= developCost + 20_000) {
+    minor = "INSURE";
+  }
+
+  return { major, minor };
 }
 ```
 
@@ -1593,11 +2035,12 @@ import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 export class OwnerSchema extends Schema {
   @type("string") ownerId: string;
   @type("string") handle: string;
-  @type("number") cash: number = 10;
+  @type("number") cash: number = 500_000;  // GD — set per mode (500K/650K/800K)
   @type("number") debt: number = 0;
   @type("number") fame: number = 0;
   @type("number") compliance: number = 1;
   @type(["string"]) properties = new ArraySchema<string>();
+  @type(["string"]) packages = new ArraySchema<string>();  // v12: package IDs
 }
 
 export class PropertySchema extends Schema {
@@ -1716,9 +2159,9 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
+      cash: -100000
     mitigation:
-      SECURITY_CONTRACT: { cash: -1 }
+      SECURITY_CONTRACT: { cash: -50000 }
     headlines:
       - "Dueño de {PROPERTY} recibe llamadas sospechosas"
       - "¿Cupos en {DISTRICT}? Vecinos preocupados"
@@ -1729,11 +2172,11 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
-      rentDelta: -1
+      cash: -100000
+      rentDelta: -10000
       rentDuration: 1
     mitigation:
-      SECURITY_CONTRACT: { cash: -1, rentDelta: 0 }
+      SECURITY_CONTRACT: { cash: -50000, rentDelta: 0 }
     headlines:
       - "Delincuentes atacan {PROPERTY}"
       - "Ola de robos en {DISTRICT}"
@@ -1744,7 +2187,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
     headlines:
       - "Grafitis aparecen en fachada de {PROPERTY}"
 
@@ -1755,11 +2198,11 @@ events:
     severity: HIGH
     condition: "property.tags.includes('logistica')"
     effects:
-      cash: -3
-      rentDelta: -2
+      cash: -150000
+      rentDelta: -20000
       rentDuration: 2
     mitigation:
-      SECURITY_CONTRACT: { cash: -2 }
+      SECURITY_CONTRACT: { cash: -100000 }
     headlines:
       - "Invasores toman parte de {PROPERTY}"
       - "Crisis en {DISTRICT}: familias ocupan almacén"
@@ -1770,8 +2213,8 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -1
-      rentDelta: -1
+      cash: -50000
+      rentDelta: -10000
       rentDuration: 1
     headlines:
       - "Evacuación en {PROPERTY} por amenaza"
@@ -1783,9 +2226,9 @@ events:
     severity: MEDIUM
     condition: "property.upgradeLevel > 0"
     effects:
-      cash: -2
+      cash: -100000
     mitigation:
-      SECURITY_CONTRACT: { cash: -1, fameDelta: 0 }
+      SECURITY_CONTRACT: { cash: -50000, fameDelta: 0 }
     headlines:
       - "Sindicato exige pago a {OWNER}"
       - "Obras en {PROPERTY} paralizadas por cupo"
@@ -1796,10 +2239,10 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -3
+      cash: -150000
       fame: -1
     mitigation:
-      SECURITY_CONTRACT: { cash: -1, fame: 0 }
+      SECURITY_CONTRACT: { cash: -50000, fame: 0 }
     headlines:
       - "{OWNER} cede ante presión"
       - "Seguridad privada impuesta en {DISTRICT}"
@@ -1810,7 +2253,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
     headlines:
       - "Guardia herido en {PROPERTY}"
 
@@ -1824,7 +2267,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
     mitigation:
       COMPLIANCE_2: { cash: 0 }
     headlines:
@@ -1837,9 +2280,9 @@ events:
     severity: MEDIUM
     condition: "property.upgradeLevel > 0"
     effects:
-      cash: -2
+      cash: -100000
     mitigation:
-      COMPLIANCE_2: { cash: -1 }
+      COMPLIANCE_2: { cash: -50000 }
     headlines:
       - "{OWNER} multado por obras sin permiso"
       - "Deficiencias estructurales en {PROPERTY}"
@@ -1850,11 +2293,11 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
-      rentDelta: -1
+      cash: -100000
+      rentDelta: -10000
       rentDuration: 1
     mitigation:
-      COMPLIANCE_3: { cash: -1, rentDelta: 0 }
+      COMPLIANCE_3: { cash: -50000, rentDelta: 0 }
     headlines:
       - "Clausuran {PROPERTY} temporalmente"
 
@@ -1864,7 +2307,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
       fame: -1
     headlines:
       - "Vecinos denuncian a {OWNER}"
@@ -1876,7 +2319,7 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
+      cash: -100000
     headlines:
       - "Municipio cuestiona uso de {PROPERTY}"
 
@@ -1886,9 +2329,9 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -3
+      cash: -150000
     mitigation:
-      COMPLIANCE_2: { cash: -2 }
+      COMPLIANCE_2: { cash: -100000 }
     headlines:
       - "SUNAT investiga a {OWNER}"
       - "Evasión fiscal en {DISTRICT}?"
@@ -1899,7 +2342,7 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -2
+      cash: -100000
       tradeLock: 2
     headlines:
       - "Juez ordena embargo sobre {PROPERTY}"
@@ -1910,7 +2353,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
     headlines:
       - "Defensa Civil observa {PROPERTY}"
 
@@ -1920,7 +2363,7 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
+      cash: -100000
       tradeLock: 1
     headlines:
       - "Disputa de terrenos afecta a {OWNER}"
@@ -1931,7 +2374,7 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
+      cash: -100000
     mitigation:
       COMPLIANCE_3: { cash: 0 }
     headlines:
@@ -1947,7 +2390,7 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -1
+      cash: -50000
       fame: -3
     headlines:
       - "AMPAY: {OWNER} en problemas"
@@ -1970,7 +2413,7 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -1
+      cash: -50000
       fame: -2
     headlines:
       - "Carta anónima acusa a {OWNER}"
@@ -2014,7 +2457,7 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -1
+      cash: -50000
       fame: -2
     headlines:
       - "Ex trabajador revela secretos de {TEAM}"
@@ -2046,7 +2489,7 @@ events:
     severity: MEDIUM
     effects:
       fame: -2
-      rentDelta: -1
+      rentDelta: -10000
       rentDuration: 1
     headlines:
       - "Tiktoker destroza a {PROPERTY}"
@@ -2061,13 +2504,13 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -3
-      rentDelta: -2
+      cash: -150000
+      rentDelta: -10000
       rentDuration: 1
       fame: -1
     mitigation:
-      INSURANCE_BASIC: { cash: -1, rentDelta: -1, fame: 0 }
-      INSURANCE_FULL: { cash: 0, rentDelta: -1, fame: 0 }
+      INSURANCE_BASIC: { cash: -50000, rentDelta: -5000, fame: 0 }
+      INSURANCE_FULL: { cash: 0, rentDelta: -5000, fame: 0 }
     headlines:
       - "Fuego consume parte de {PROPERTY}"
       - "Bomberos controlan incendio en {DISTRICT}"
@@ -2078,11 +2521,11 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -2
-      rentDelta: -1
+      cash: -100000
+      rentDelta: -10000
       rentDuration: 1
     mitigation:
-      INSURANCE_BASIC: { cash: -1 }
+      INSURANCE_BASIC: { cash: -50000 }
       INSURANCE_FULL: { cash: 0 }
     headlines:
       - "Agua invade {PROPERTY}"
@@ -2094,12 +2537,12 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -3
-      rentDelta: -2
+      cash: -150000
+      rentDelta: -20000
       rentDuration: 2
     mitigation:
-      INSURANCE_BASIC: { cash: -2 }
-      INSURANCE_FULL: { cash: -1, rentDelta: -1 }
+      INSURANCE_BASIC: { cash: -100000 }
+      INSURANCE_FULL: { cash: -50000, rentDelta: -10000 }
     headlines:
       - "Grietas peligrosas en {PROPERTY}"
       - "Ingenieros evalúan estructura de {PROPERTY}"
@@ -2110,7 +2553,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
     mitigation:
       INSURANCE_BASIC: { cash: 0 }
       INSURANCE_FULL: { cash: 0 }
@@ -2123,8 +2566,8 @@ events:
     type: TARGETED
     severity: MEDIUM
     effects:
-      cash: -1
-      rentDelta: -1
+      cash: -50000
+      rentDelta: -10000
       rentDuration: 1
     headlines:
       - "Sin luz ni agua en {PROPERTY}"
@@ -2135,7 +2578,7 @@ events:
     type: TARGETED
     severity: HIGH
     effects:
-      cash: -3
+      cash: -150000
       fame: -1
     mitigation:
       INSURANCE_FULL: { cash: 0 }
@@ -2164,7 +2607,7 @@ events:
     type: TARGETED
     severity: LOW
     effects:
-      cash: -1
+      cash: -50000
       tradeLock: 2
     headlines:
       - "Municipalidad marca fachada de {PROPERTY} con spray rojo"
@@ -2177,10 +2620,10 @@ events:
     severity: MEDIUM
     condition: "property.upgradeLevel > 0"
     effects:
-      cash: -2
+      cash: -100000
       fame: -1
     mitigation:
-      INSURANCE_BASIC: { cash: -1 }
+      INSURANCE_BASIC: { cash: -50000 }
       INSURANCE_FULL: { cash: 0, fame: 0 }
     headlines:
       - "Obrero herido en {PROPERTY}"
@@ -2221,7 +2664,7 @@ events:
     type: TARGETED_POSITIVE
     severity: LOW
     effects:
-      cash: 1
+      cash: 50000
       compliance: 1
     headlines:
       - "{PROPERTY} recibe reconocimiento"
@@ -2233,7 +2676,7 @@ events:
     severity: MEDIUM
     condition: "property.tags.includes('turismo')"
     effects:
-      rentDelta: 2
+      rentDelta: 20000
       rentDuration: 1
     headlines:
       - "Boom turístico beneficia a {DISTRICT}"
@@ -2243,8 +2686,8 @@ events:
 
 | ID | Name (Spanish) | Effect |
 |----|----------------|--------|
-| INF-01 | Terminal del Metro anunciado | +1 rent, +2 worth, enables expropriation |
-| INF-02 | Nueva vía expresa | +1 rent, +2 worth, enables expropriation |
+| INF-01 | Terminal del Metro anunciado | +GD 5,000 rent, +GD 100,000 worth, enables expropriation |
+| INF-02 | Nueva vía expresa | +GD 5,000 rent, +GD 100,000 worth, enables expropriation |
 
 **Duration**: 2 rounds
 **Activation**: Via E-053 "Anuncio de obras"
@@ -2257,10 +2700,10 @@ globalShocks:
     title_es: "Terremoto"
     effects:
       allProperties:
-        rentDelta: -1
+        rentDelta: -10000
         rentDuration: 2
       allOwners:
-        cash: -1
+        cash: -50000
     headlines:
       - "Temblor sacude Lima"
       - "Pánico en la capital"
@@ -2272,7 +2715,7 @@ globalShocks:
         Inflation: 1
         InterestRates: 1
       allOwners:
-        cash: -2
+        cash: -100000
     headlines:
       - "Dólar se dispara"
       - "BCR interviene mercado"
@@ -2292,10 +2735,10 @@ globalShocks:
     title_es: "Pandemia"
     effects:
       allProperties:
-        rentDelta: -2
+        rentDelta: -20000
         rentDuration: 2
       tags:
-        turismo: -2
+        turismo: -20000
     headlines:
       - "Alerta sanitaria nacional"
       - "Cuarentena en Lima"
@@ -2304,7 +2747,7 @@ globalShocks:
     title_es: "Boom inmobiliario"
     effects:
       allProperties:
-        worthDelta: 2
+        worthDelta: 100000
         worthDuration: 2
     headlines:
       - "Precios de terrenos se disparan"
@@ -2314,9 +2757,9 @@ globalShocks:
     title_es: "Huelga general"
     effects:
       allOwners:
-        cash: -1
+        cash: -50000
       tags:
-        logistica: -2
+        logistica: -20000
     headlines:
       - "Paro nacional paraliza el país"
       - "Carreteras bloqueadas"
@@ -2331,17 +2774,17 @@ globalShocks:
 ## B4: Insurance Mitigation Tables (Authoritative)
 
 ### Incendio (E-045)
-| Level | Cash | Rent | Fame |
-|-------|------|------|------|
-| NONE | -3 | -2 (1 round) | -1 |
-| BASIC | -1 | -1 (1 round) | 0 |
-| FULL | 0 | -1 (1 round) | 0 |
+| Level | Cash (GD) | Rent (GD) | Fame |
+|-------|-----------|-----------|------|
+| NONE | -150,000 | -10,000 (1 round) | -1 |
+| BASIC | -50,000 | -5,000 (1 round) | 0 |
+| FULL | 0 | -5,000 (1 round) | 0 |
 
 ### Structural/Liability (E-046, E-047, E-050, E-052)
-| Level | Cash Reduction |
-|-------|----------------|
-| BASIC | -1 |
-| FULL | -2 (+ Fame -1 cancelled) |
+| Level | Cash Reduction (GD) |
+|-------|---------------------|
+| BASIC | -50,000 from base penalty |
+| FULL | -100,000 from base penalty (+ Fame -1 cancelled) |
 
 ### Small Damage (E-048)
 | Level | Effect |
@@ -2352,7 +2795,7 @@ globalShocks:
 ### Tenant Lawsuit (E-050)
 | Level/Condition | Effect |
 |-----------------|--------|
-| FULL | All cash loss cancelled |
+| FULL | All cash loss (GD 150,000) cancelled |
 | Compliance ≥2 | Fame loss cancelled |
 
 ---
@@ -2408,16 +2851,16 @@ globalShocks:
 │           RESUMEN DE INGRESOS          │
 │           ═══════════════════          │
 │                                        │
-│   Rentas:                    +$8  🟢   │
-│   Señales de mercado:        +$2  🟢   │
-│   Bonos de distrito:         +$1  🟢   │
+│   Rentas:               +GD 95,000 🟢  │
+│   Señales de mercado:    +GD 6,000 🟢  │
+│   Bonos de distrito:     +GD 5,000 🟢  │
 │   ─────────────────────────────────    │
-│   Costos operativos:         -$2  🔴   │
-│   Impuesto a la fama:        -$1  🔴   │
+│   Costos operativos:    -GD 16,000 🔴  │
+│   Impuesto a la fama:    -GD 8,000 🔴  │
 │   ─────────────────────────────────    │
 │                                        │
-│   TOTAL:                     +$8       │
-│   [████████████████░░░░] → $18         │
+│   TOTAL:                +GD 82,000     │
+│   [████████████████░░░░] → GD 732,000  │
 │                                        │
 └────────────────────────────────────────┘
 ```
@@ -2580,6 +3023,8 @@ Character type: {DYNASTY_TYPE}
 | SUBMIT_WATCHER_RUMOR | { targetOwnerId } | Any |
 | SUBMIT_WATCHER_BET | { propertyId, predictedWinnerId } | BID |
 | SUBMIT_AWARD_VOTE | { awardId, nomineeId } | AWARDS |
+| SUBMIT_PACKAGE | { propertyIds, category } | ACTION |
+| SUBMIT_QUICK_CHAT | { phraseId, districtParam? } | Any |
 | REQUEST_SNAPSHOT | { } | Any |
 
 ### Server → Client
@@ -2602,6 +3047,10 @@ Character type: {DYNASTY_TYPE}
 | STATE_SNAPSHOT | MatchStateSnapshot |
 | MATCH_END | { rankings, portadaUrl } |
 | OP_DELTA | { seq, changes } |
+| PACKAGE_CREATED | { packageId, ownerId, category, propertyIds } |
+| PACKAGE_DISSOLVED | { packageId, reason } |
+| QUICK_CHAT_MSG | { fromOwnerId, phraseId, districtParam?, text_es } |
+| DEAL_SUGGESTION | { suggestions: Array<{ templateId, prefilled }> } |
 | ERROR | { code, message_es } |
 
 ## F3: Delta Packets (NEW in v10)
@@ -2614,7 +3063,7 @@ Character type: {DYNASTY_TYPE}
   "type": "OP_DELTA",
   "seq": 105,
   "changes": [
-    { "op": "SET_CASH", "id": "O_01", "val": 15 },
+    { "op": "SET_CASH", "id": "O_01", "val": 650000 },
     { "op": "SET_OWNER", "id": "P_05", "val": "O_02" },
     { "op": "SET_FAME", "id": "O_03", "val": 4 },
     { "op": "ADD_PROPERTY", "id": "O_01", "val": "P_05" },
@@ -2637,6 +3086,9 @@ Character type: {DYNASTY_TYPE}
 | REMOVE_PROPERTY | ownerId | propertyId |
 | SET_PHASE | - | Phase |
 | SET_ROUND | - | number |
+| SET_PACKAGE | propertyId | packageId or "" |
+| ADD_PACKAGE | ownerId | packageId |
+| REMOVE_PACKAGE | ownerId | packageId |
 
 **Client Handling**:
 1. Apply changes in order
@@ -2764,22 +3216,33 @@ attire:
 | Worried/sweating | Event damage, losses |
 | Riding bill (flying) | Big win celebration |
 
-### V2.3 Imperio Currency ("Imperio Bill")
+### V2.3 Imperio Currency ("Graf Dollar Bills")
 
-**Design** (styled as US $1000 bill):
+**Design** — Graf Dollar (GD) denomination bills styled as currency:
+
+| Denomination | Color Accent | Bill Size |
+|-------------|-------------|-----------|
+| GD 50,000 | Green (standard) | Small bill |
+| GD 100,000 | Blue-green | Medium bill |
+| GD 500,000 | Gold-accented | Large bill |
+
+**Base Design** (common to all denominations):
 - Portrait: El Magnate in engraving/crosshatch style
-- Denomination: "1000" in corners
+- Denomination in corners (e.g., "GD 100,000")
 - Text: "IMPERIO INMOBILIARIO" as header
+- "GRAF DOLLAR" sub-header
 - Serial number: decorative (game-generated)
-- Color: Traditional green money tones
+- Color: Traditional green money tones with denomination-specific accents
 - Fine filigree borders and ornamental patterns
 - "NOT LEGAL TENDER" small print (legal safety)
 
 **Animation Uses**:
-- Cash gain: Bills fly toward player
+- Cash gain: Bills fly toward player (denomination matches amount)
 - Cash loss: Bills fly away
-- Big win: Raining bills particle effect
+- Big win: Raining bills particle effect (GD 500K bills)
 - Auction win: Bill stamp/seal animation
+
+**Display Format**: Always show with "GD" prefix and thousands separator: `GD 1,500,000`
 
 ## V3: Match UI Kit (Godot Scenes) — REVISED
 
@@ -2817,7 +3280,7 @@ attire:
 **Elements**:
 - Current bid display (large gold numbers)
 - +/- stepper buttons (bronze coins style)
-- Quick bid buttons: +1, +2, +5 (green bills)
+- Quick bid buttons: +GD 50K, +GD 100K, +GD 200K (green bills)
 - "PUJAR" main button (red with gold border, 3D depth)
 - Fame token toggle (star icon, lights up when active)
 - Timer: circular countdown with gold ring
@@ -3004,7 +3467,7 @@ attire:
 | sfx_bid | Bid submit | Poker chip click |
 | sfx_auction_win | Auction won | Gavel slam + crowd cheer |
 | sfx_cash_gain | Money received | Ka-ching register + coins |
-| sfx_cash_loss | Money lost | Sad trombone note + coins falling |
+| sfx_cash_loss | Money lost | Low orchestral sting + paper shuffle (bills departing) |
 | sfx_stamp | Official action | Heavy stamp thud |
 | sfx_deal_accept | Deal completed | Handshake + paper shuffle |
 | sfx_deal_reject | Deal rejected | Paper tear |

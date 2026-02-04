@@ -4,20 +4,35 @@
     "name": "General Orden",
     "slogan": "Mano dura, pero con licencia",
     "meters": { "Security": 1, "ConstructionEnforcement": 1 },
-    "weightMods": { "Extortion": -10, "Licencias": 10 }
+    "weightMods": { "Extortion": -10, "Licencias": 10 },
+    "contributionTiers": [0, 25000, 50000],
+    "quickModeContributionTiers": [0, 25000]
   },
   {
     "id": "C-02",
     "name": "Tecnocrata Pro",
     "slogan": "Estabilidad, por favor",
     "meters": { "BCRP": 1, "InterestRates": -1, "PoliticalStability": 1 },
-    "weightMods": {}
+    "weightMods": {},
+    "contributionTiers": [0, 25000, 50000],
+    "quickModeContributionTiers": [0, 25000]
   },
   {
     "id": "C-03",
     "name": "Shock Reformista",
     "slogan": "Corta la grasa",
     "meters": { "PoliticalStability": 1, "InterestRates": 1, "Inflation": -1 },
-    "weightMods": { "Prensa": 10 }
+    "weightMods": { "Prensa": 10 },
+    "contributionTiers": [0, 25000, 50000],
+    "quickModeContributionTiers": [0, 25000]
+  },
+  {
+    "id": "C-04",
+    "name": "Estado Expansivo",
+    "slogan": "Más Estado, más obra",
+    "meters": { "Inflation": 1, "BCRP": -1, "PoliticalStability": -1 },
+    "weightMods": { "Licencias": 15 },
+    "contributionTiers": [0, 25000, 50000],
+    "quickModeContributionTiers": [0, 25000]
   }
 ]

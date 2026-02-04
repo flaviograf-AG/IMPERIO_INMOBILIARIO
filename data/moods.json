@@ -1,0 +1,84 @@
+[
+  {
+    "id": "M-01",
+    "nombre_es": "Boom de alquileres",
+    "effect": {
+      "type": "RENT_ALL",
+      "delta": 10000,
+      "duration": 1
+    },
+    "sentiment": "POSITIVE"
+  },
+  {
+    "id": "M-02",
+    "nombre_es": "Miedo al mercado",
+    "effect": {
+      "type": "RENT_ALL",
+      "delta": -10000,
+      "duration": 1
+    },
+    "sentiment": "NEGATIVE"
+  },
+  {
+    "id": "M-03",
+    "nombre_es": "Fiebre inversora",
+    "effect": {
+      "type": "DEVELOP_COST",
+      "delta": -30000,
+      "duration": 1
+    },
+    "sentiment": "POSITIVE"
+  },
+  {
+    "id": "M-04",
+    "nombre_es": "Vecinos molestos",
+    "effect": {
+      "type": "RISK_ALL",
+      "delta": 0.3,
+      "duration": 1
+    },
+    "sentiment": "NEGATIVE"
+  },
+  {
+    "id": "M-05",
+    "nombre_es": "Calma chicha",
+    "effect": {
+      "type": "SUPPRESS_EVENT",
+      "delta": 1,
+      "duration": 1
+    },
+    "sentiment": "POSITIVE"
+  },
+  {
+    "id": "M-06",
+    "nombre_es": "Prensa hambrienta",
+    "effect": {
+      "type": "FAME_MULTIPLIER",
+      "multiplier": 2,
+      "duration": 1
+    },
+    "sentiment": "NEGATIVE"
+  },
+  {
+    "id": "M-07",
+    "nombre_es": "Ojo fiscalizador",
+    "effect": {
+      "type": "COMPLIANCE_BONUS",
+      "delta": 20000,
+      "threshold": 2,
+      "duration": 1
+    },
+    "sentiment": "POSITIVE"
+  },
+  {
+    "id": "M-08",
+    "nombre_es": "Gentrificacion express",
+    "effect": {
+      "type": "RENT_TIER",
+      "delta": 12000,
+      "threshold": 400000,
+      "duration": 1
+    },
+    "sentiment": "NEUTRAL"
+  }
+]
