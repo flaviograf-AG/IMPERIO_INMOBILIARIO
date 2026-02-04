@@ -1,0 +1,574 @@
+Graf Dollar System Specification
+
+0. Purpose and scope
+
+Implement a centralized, server-authoritative virtual currency called Graf Dollar for a multiplayer strategy game (Godot client). The system must support:
+
+Phase 1 (MVP): server-issued rewards (micro-wins) and optional spending.
+
+Phase 2 (later): player-to-player transfers (“give”).
+
+Phase 3 (later): player-to-player lending (“loan contracts”) with repayments.
+
+
+Constraints:
+
+No public blockchain.
+
+Issuance must cost the operator nothing per event (off-chain ledger).
+
+Authoritative server decides wins; clients cannot self-award.
+
+Data integrity, idempotency, and auditability are mandatory.
+
+
+1. Definitions
+
+Graf Dollar (GD): the in-game currency.
+
+Base unit: integer smallest denomination (e.g., 1 GD = 1000 units, or 1 GD = 1 unit). Use integer arithmetic only. No floats.
+
+Ledger: append-only record of all Graf Dollar movements.
+
+Double-entry transaction: each transaction has entries whose amounts sum to 0.
+
+
+2. High-level architecture
+
+2.1 Components
+
+Game server: authoritative multiplayer backend (recommended: Nakama). Responsible for match validation and initiating Graf Dollar transactions.
+
+Database: PostgreSQL. Source of truth for Graf Dollar ledger.
+
+Optional:
+
+Admin tooling (can be a minimal internal API + SQL views).
+
+
+
+2.2 Trust model
+
+Clients (Godot) are untrusted.
+
+Only server-side code can:
+
+mint/issue Graf Dollar,
+
+approve transfers,
+
+create/approve loan contracts,
+
+execute repayments.
+
+
+All money-moving operations must be atomic and idempotent.
+
+
+3. Core design requirements
+
+3.1 Append-only ledger
+
+Never delete or mutate ledger history.
+
+Corrections are performed via compensating transactions (reversal/adjustment), preserving audit trail.
+
+
+3.2 Double-entry accounting
+
+All Graf Dollar operations MUST be represented as one ledger_tx with ≥2 ledger_entry rows such that:
+
+SUM(ledger_entry.amount) = 0 for each ledger_tx.
+
+Convention:
+
+Positive amount = credit to that user.
+
+Negative amount = debit from that user.
+
+
+
+3.3 System account
+
+Create a reserved “system” account used for minting and sink/source operations.
+
+System account is represented as a normal user_id (SYSTEM_USER_ID) with special handling.
+
+Minting = debit system (negative) + credit player (positive), or inverse based on convention; the key is sum=0.
+
+
+3.4 Idempotency
+
+Every externally-triggered operation MUST include an idempotency key stored in ledger_tx.idempotency_key (unique).
+
+Awards: award:{match_id}:{user_id}:{reward_type}
+
+Transfers: xfer:{sender_id}:{client_request_id}
+
+Purchases: buy:{user_id}:{order_id}
+
+Loan events: loan_disburse:{loan_id}, loan_repay:{loan_id}:{repayment_seq}
+
+
+If a duplicate idempotency key is received, return the existing result without creating new ledger rows.
+
+3.5 Balance checks
+
+For any debit (negative entry) from a player:
+
+Enforce available_balance >= debit_amount at transaction time.
+
+“available_balance” initially equals total balance; later extensions may add holds/escrow.
+
+
+3.6 Performance and caching
+
+Default correctness: derive balance by summing ledger entries.
+
+Optional performance: maintain balance_cache updated inside the same DB transaction as ledger inserts.
+
+The ledger remains the source of truth; cache is reconstructible.
+
+
+4. Data model (PostgreSQL)
+
+4.1 Tables
+
+4.1.1 ledger_tx
+
+One row per logical Graf Dollar transaction.
+
+Fields:
+
+tx_id UUID PK
+
+tx_type TEXT NOT NULL
+Allowed values: award, transfer, purchase, loan_disburse, loan_repay, adjust, reversal
+
+created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+created_by TEXT NOT NULL
+Allowed: system, server, admin, user (user should rarely create money-moving tx directly; server proxies)
+
+idempotency_key TEXT UNIQUE (nullable only for purely internal ops; preferred always set)
+
+metadata JSONB NOT NULL DEFAULT '{}'
+
+
+Indexes:
+
+unique index on idempotency_key (already via UNIQUE)
+
+
+4.1.2 ledger_entry
+
+Double-entry lines for each transaction.
+
+Fields:
+
+entry_id UUID PK
+
+tx_id UUID NOT NULL FK -> ledger_tx(tx_id) ON DELETE RESTRICT
+
+user_id UUID NOT NULL (player or SYSTEM_USER_ID)
+
+amount BIGINT NOT NULL (integer base units; positive credit, negative debit)
+
+created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+
+Indexes:
+
+(user_id, created_at)
+
+(tx_id)
+
+
+4.1.3 balance_cache (optional but recommended)
+
+Fields:
+
+user_id UUID PK
+
+balance BIGINT NOT NULL
+
+updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+
+4.1.4 loan_contract (Phase 3)
+
+Fields:
+
+loan_id UUID PK
+
+lender_user_id UUID NOT NULL
+
+borrower_user_id UUID NOT NULL
+
+principal BIGINT NOT NULL
+
+fee BIGINT NOT NULL DEFAULT 0 (fixed fee; no compounding in v1)
+
+due_at TIMESTAMPTZ NOT NULL
+
+status TEXT NOT NULL
+Allowed: offered, active, repaid, defaulted, cancelled
+
+created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+accepted_at TIMESTAMPTZ
+
+metadata JSONB NOT NULL DEFAULT '{}'
+
+
+Indexes:
+
+(borrower_user_id, status)
+
+(lender_user_id, status)
+
+
+4.2 Integrity enforcement
+
+Application MUST ensure:
+
+For each tx_id, SUM(amount) = 0.
+
+For each debit from non-system users, sufficient balance exists.
+
+
+Optional DB-level hardening:
+
+Trigger to validate sum=0 per tx at commit time (may be expensive; prefer app-level + periodic audits).
+
+Constraint preventing non-system minting types unless created_by is server/admin.
+
+
+5. Core operations (server-side)
+
+All operations must be implemented as DB transactions with SERIALIZABLE or REPEATABLE READ isolation (choose based on throughput) and must be atomic.
+
+5.1 Award (mint Graf Dollar)
+
+Triggered only by authoritative match outcome.
+
+Input:
+
+match_id
+
+user_id
+
+amount (base units)
+
+reward_type (e.g., win, daily_bonus, quest)
+
+
+Process:
+
+1. Compute idempotency_key = award:{match_id}:{user_id}:{reward_type}
+
+
+2. Begin DB transaction.
+
+
+3. Insert ledger_tx with tx_type='award'.
+
+
+4. Insert two ledger_entry rows:
+
+(SYSTEM_USER_ID, -amount)
+
+(user_id, +amount)
+
+
+
+5. Update balance_cache if used:
+
+balance += amount for user_id
+
+
+
+6. Commit.
+
+
+7. Return tx_id + new balance.
+
+
+
+5.2 Spend (purchase / sink)
+
+Input:
+
+user_id
+
+amount
+
+order_id
+
+reason
+
+
+Process:
+
+1. idempotency_key = buy:{user_id}:{order_id}
+
+
+2. Verify available_balance >= amount.
+
+
+3. Insert ledger_tx (tx_type='purchase').
+
+
+4. Entries:
+
+(user_id, -amount)
+
+(SYSTEM_USER_ID, +amount) (sink to system)
+
+
+
+5. Update cache if used:
+
+balance -= amount
+
+
+
+
+5.3 Transfer (Phase 2)
+
+Input:
+
+sender_id
+
+receiver_id
+
+amount
+
+client_request_id
+
+
+Process:
+
+1. idempotency_key = xfer:{sender_id}:{client_request_id}
+
+
+2. Validate:
+
+amount > 0
+
+sender != receiver
+
+receiver exists
+
+sender balance >= amount
+
+
+
+3. Insert ledger_tx (tx_type='transfer', created_by='server')
+
+
+4. Entries:
+
+(sender_id, -amount)
+
+(receiver_id, +amount)
+
+
+
+5. Update cache: sender -= amount, receiver += amount
+
+
+6. Commit.
+
+
+
+Anti-abuse requirements:
+
+daily transfer cap per account
+
+cooldown for new accounts before transfers
+
+rate limit on transfer calls
+
+
+5.4 Loan contracts (Phase 3)
+
+5.4.1 Offer loan
+
+Input:
+
+lender_id, borrower_id, principal, fee, due_at
+
+
+Rules:
+
+Validate borrower eligibility (account age, limits, max active loans).
+
+Create loan_contract with status='offered'.
+
+
+5.4.2 Accept loan (disbursement)
+
+Input:
+
+loan_id
+
+
+Process:
+
+1. Load loan, ensure status offered.
+
+
+2. Ensure lender balance >= principal.
+
+
+3. In one DB transaction:
+
+Update loan status to active, set accepted_at.
+
+Create ledger_tx (tx_type='loan_disburse', idempotency_key=loan_disburse:{loan_id})
+
+Entries:
+
+(lender_id, -principal)
+
+(borrower_id, +principal)
+
+
+
+
+4. Commit.
+
+
+
+5.4.3 Repay loan
+
+Repayment amount due = principal + fee (single payment v1).
+
+Process:
+
+1. Ensure loan status active.
+
+
+2. Borrower balance >= due_amount.
+
+
+3. Create ledger_tx (tx_type='loan_repay', idempotency_key=loan_repay:{loan_id}:1)
+
+
+4. Entries:
+
+(borrower_id, -due_amount)
+
+(lender_id, +due_amount)
+
+
+
+5. Mark loan repaid.
+
+
+6. Commit.
+
+
+
+Default handling:
+
+If now() > due_at and not repaid, set defaulted (manual/admin process or scheduled job).
+
+Any penalties must be implemented as additional ledger transactions, not edits.
+
+
+6. API surface (logical; implement as Nakama RPC or REST)
+
+6.1 Read endpoints
+
+GET /gd/balance?user_id=...
+
+GET /gd/ledger?user_id=...&limit=...&cursor=...
+
+GET /gd/loan/list?user_id=...&role=lender|borrower&status=...
+
+
+6.2 Write endpoints (server-authorized)
+
+POST /gd/award (server only; not callable by client directly)
+
+POST /gd/purchase (client -> server, server validates)
+
+POST /gd/transfer (Phase 2)
+
+POST /gd/loan/offer (Phase 3)
+
+POST /gd/loan/accept (Phase 3)
+
+POST /gd/loan/repay (Phase 3)
+
+
+Authorization requirements:
+
+Clients can only initiate operations for themselves.
+
+Award endpoint must be internal/server-only.
+
+
+7. Concurrency and correctness notes
+
+Use DB transactions and row locking to prevent double-spend on simultaneous transfers/spends.
+
+If using balance_cache, update it within the same transaction as ledger inserts.
+
+Recommended strategy:
+
+Lock balance_cache row for involved users with SELECT ... FOR UPDATE before checking balance.
+
+Alternatively compute balance from ledger within the same transaction for MVP (slower).
+
+
+
+8. Observability and auditing
+
+Log every ledger_tx creation with tx_id, type, user(s), amount, idempotency_key.
+
+Provide periodic audit job:
+
+verify for each tx_id sum(entries)=0
+
+verify cached balances match ledger sums (if cache enabled)
+
+
+Admin operations:
+
+freeze account
+
+create adjustment/reversal transactions with required metadata (admin_id, reason, ticket_id)
+
+
+
+9. Naming and UX requirements
+
+Display name: Graf Dollar
+
+Symbol (optional): GD
+
+Always show balances in Graf Dollar with correct decimal placement derived from base units.
+
+
+10. MVP implementation checklist
+
+[ ] Define base units for Graf Dollar (integer precision).
+
+[ ] Implement DB schema + migrations.
+
+[ ] Implement award flow from authoritative match result.
+
+[ ] Implement spend flow (optional).
+
+[ ] Add idempotency handling across write operations.
+
+[ ] Add balance caching only if required by load.
+
+[ ] Add basic admin reversal/adjust transaction capability.
+
+[ ] Add transfer (Phase 2) behind feature flag.
+
+[ ] Add loans (Phase 3) behind feature flag.
