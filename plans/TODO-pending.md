@@ -39,21 +39,21 @@
 
 ---
 
-### [ ] Expanded Implementation Plan: Full Game (Server + Client)
-**Status:** NOT STARTED
+### [x] Expanded Implementation Plan: Full Game (Server + Client)
+**Status:** COMPLETED (2026-02-05)
 **Blocked by:** Spec amendment v12.4
 **Blocks:** Implementation start
 
 **Tasks:**
-- [ ] Add Phase 7-10: Godot client infrastructure
-- [ ] Add Phase 11-12: Integration and E2E testing
-- [ ] Define open source fork points in each phase
-- [ ] Add asset pipeline tasks
-- [ ] Add mobile-specific tasks (touch, responsive)
-- [ ] Add HTML5/WebAssembly export tasks
-- [ ] Update testing strategy for client
+- [x] Add Phase 7-10: Godot client infrastructure
+- [x] Add Phase 11-12: Integration and E2E testing
+- [x] Define open source fork points in each phase
+- [x] Add asset pipeline tasks (Phase 12.3)
+- [x] Add mobile-specific tasks (touch, responsive)
+- [x] Add HTML5/WebAssembly export tasks
+- [x] Update testing strategy for client
 
-**Deliverable:** Updated `modular-implementation-plan.md` or new `full-implementation-plan.md`
+**Deliverable:** Updated `modular-implementation-plan.md` (Phases 7-12 added)
 
 ---
 
@@ -74,6 +74,18 @@
 ---
 
 ## Completed
+
+### [x] Expanded Implementation Plan: Full Game (Server + Client)
+**Completed:** 2026-02-05
+**Deliverable:** Updated `modular-implementation-plan.md`
+**Summary:**
+- Phase 7: Godot client foundation (project setup, card-framework, autoloads)
+- Phase 8: Card UI integration (PropertyCard, MarketRow, Portfolio, state sync)
+- Phase 9: Match UI (phase panels, Visual Ledger, Quick Chat, events)
+- Phase 10: Polish & export (mobile input, audio, responsive, web export)
+- Phase 11: Client-server integration (full round cycle, reconnection, watchers)
+- Phase 12: Launch prep (lobby, results, share card, performance)
+- Timeline: 24 weeks total (12 server + 12 client)
 
 ### [x] Spec Amendment v12.4: Open Source Foundation Commitments
 **Completed:** 2026-02-05

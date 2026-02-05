@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Decompose the ~6400-line monolithic spec (v12.3) into independently testable modules with microservice-like boundaries.
+**Goal:** Decompose the ~6200-line monolithic spec (v12.4) into independently testable modules with microservice-like boundaries. Includes both server (TypeScript/Colyseus) and client (Godot 4.5+) implementation.
 
 **Architecture:** Modular monolith — 14 npm packages under `packages/` with explicit interfaces and dependency injection. Each module testable in isolation without full game running.
 
@@ -274,9 +274,314 @@ RiskScore = 1.0
 
 ---
 
+## CLIENT IMPLEMENTATION (Phases 7-12)
+
+> **Foundation Commitments (Spec v12.4, Appendix O):**
+> - Card UI: `chun92/card-framework` (MIT, Godot 4.5+)
+> - WebSocket patterns: `alpapaydin/Godot4-Multiplayer` (MIT)
+> - See spec Section 11.2 for full architecture
+
+---
+
+### Phase 7: Godot Client Foundation (Week 13-14)
+
+#### Task 7.1: Initialize Godot Project
+- Create Godot 4.5+ project with GL Compatibility renderer
+- Configure project settings for WebGL2 export
+- Set up directory structure per spec 11.2.2:
+```
+client/
+├── project.godot
+├── addons/card-framework/
+├── autoloads/
+├── scenes/
+├── data/
+└── assets/
+```
+
+#### Task 7.2: Install Card Framework
+**Source:** `chun92/card-framework` (copy to `addons/card-framework/`)
+- Enable plugin in Project Settings
+- Verify Card, Pile, Hand, CardManager work
+- Test basic drag/drop functionality
+
+**Test:** Instantiate Card, add to Pile, move to Hand
+
+#### Task 7.3: Create Autoloads
+**Files:** `client/autoloads/`
+- `Constants.gd` — Server URL, port, SSL toggle, cert path
+- `ImperioClient.gd` — WebSocket client (spec 11.2.4)
+- `GameState.gd` — Local state mirror, signal hub
+
+**Key Signals:**
+```gdscript
+signal connected
+signal disconnected
+signal state_changed(state: Dictionary)
+signal phase_changed(phase: String, ends_at: int)
+signal error_received(code: String, message: String)
+```
+
+**Test:** Connect to local Colyseus server, receive state snapshot
+
+#### Task 7.4: WebSocket SSL Support
+Adapt from `alpapaydin/Godot4-Multiplayer` patterns:
+- `USE_SSL` toggle in Constants
+- Certificate loading for native builds
+- Browser handles SSL for web exports
+
+**Test:** Connect via `wss://` to HTTPS server
+
+---
+
+### Phase 8: Card UI Integration (Week 15-16)
+
+#### Task 8.1: PropertyCard Extension
+**Files:** `client/scenes/match/components/PropertyCard.gd`
+```gdscript
+class_name PropertyCard
+extends Card
+
+var property_id: String
+var owner_id: String
+var upgrade_level: int = 0
+var is_insured: bool = false
+var package_id: String = ""
+
+func update_from_state(property_state: Dictionary):
+    # Sync from Colyseus state
+```
+
+**Visual Elements:**
+- GD price label
+- District badge
+- Upgrade stars (1-5)
+- Insurance shield icon
+- Package indicator
+
+**Test:** Create card from JSON, update from state dict
+
+#### Task 8.2: MarketRow Container
+**Files:** `client/scenes/match/components/MarketRow.gd`
+- Extends `Pile` from card-framework
+- Horizontal layout for 5-6 cards
+- Emits `property_selected(property_id)` on click
+- Highlight affordability based on player cash
+
+**Test:** Add 5 cards, select one, verify signal
+
+#### Task 8.3: Portfolio Container
+**Files:** `client/scenes/match/components/Portfolio.gd`
+- Extends `Hand` from card-framework
+- Shows player's owned properties
+- Groups by district (visual indicator)
+- Package grouping with border
+
+**Test:** Add cards, verify layout, check district grouping
+
+#### Task 8.4: State Synchronization
+**Files:** `client/scenes/match/match.gd`
+- Connect to `ImperioClient.state_changed`
+- Create/update PropertyCards from state
+- Move cards between containers on ownership change
+- Handle property reveal animation
+
+**Sync Flow:**
+1. `STATE_SNAPSHOT` → Full rebuild
+2. `OP_DELTA` → Incremental updates
+3. `PHASE_CHANGE` → UI transitions
+
+**Test:** Full round cycle with 4 players, cards move correctly
+
+---
+
+### Phase 9: Match UI (Week 17-18)
+
+#### Task 9.1: Phase Panels
+**Files:** `client/scenes/match/phases/`
+
+| Panel | Elements | User Actions |
+|-------|----------|--------------|
+| `BidPanel.tscn` | Property cards, bid input, timer | Select property, enter bid amount |
+| `ActionPanel.tscn` | Major/Minor slots, action buttons | Select action, confirm |
+| `DealPanel.tscn` | Template dropdown, partner select, price input | Create offer, respond to offers |
+| `MoodPanel.tscn` | 3 mood options, vote buttons | Cast vote |
+| `ElectionPanel.tscn` | 4 candidates, vote buttons | Cast vote |
+
+**Phase Timer:** Countdown bar with urgency colors (green → yellow → red)
+
+#### Task 9.2: Visual Ledger
+**Files:** `client/scenes/match/components/VisualLedger.gd`
+- Animated income breakdown (spec V4.1)
+- Staggered item appearance (0.2s each)
+- Running cash counter
+- Adaptive timing (3.0s base + 0.15s/item, max 5.0s)
+
+**Animation Sequence:**
+1. Fade in panel
+2. Income items (green, staggered)
+3. Cost items (red, staggered)
+4. Total with scale punch
+5. Cash counter animation
+6. Fade out
+
+**Test:** 8-item ledger completes in <5s
+
+#### Task 9.3: Quick Chat
+**Files:** `client/scenes/match/components/QuickChat.gd`
+- 12 preset buttons (loaded from `quickchat.json`)
+- 2 messages/phase rate limit (client-side hint)
+- Floating message display over sender
+
+**Test:** Send message, verify rate limiting
+
+#### Task 9.4: Event Overlay
+**Files:** `client/scenes/match/components/EventOverlay.gd`
+- Full-screen overlay for events
+- Event name, description (Spanish)
+- Target player highlight
+- 10s choice window for CHOICE events
+- Insurance mitigation display
+
+**Test:** Display event, verify timer, handle choice
+
+#### Task 9.5: HUD Elements
+**Files:** `client/scenes/match/hud/`
+- `CashDisplay.tscn` — Current GD with animated changes
+- `PhaseTimer.tscn` — Countdown with phase name
+- `PlayerList.tscn` — 12 players, wealth rank, connection status
+- `RoundIndicator.tscn` — Current round / max rounds
+
+---
+
+### Phase 10: Polish & Export (Week 19-20)
+
+#### Task 10.1: Mobile Input
+- Bid amounts: Preset buttons (+50K, +100K, +500K, MAX)
+- Property selection: Tap on card (no drag required)
+- Deal prices: Numeric input with validation
+- HTML DOM overlay for text inputs (profile name, chat)
+
+**Touch Targets:** Minimum 44x44 pixels
+
+#### Task 10.2: Audio Integration
+**Files:** `client/assets/audio/`, `client/scenes/match/Audio/`
+- Ambient layers (spec V6.1):
+  - `lobby_ambient.ogg`
+  - `bid_tension.ogg`
+  - `action_calm.ogg`
+  - `event_drama.ogg`
+- SFX: bid_placed, auction_won, card_move, event_hit
+- Volume ducking for events
+
+#### Task 10.3: Responsive Layout
+- Test on 16:9 (desktop), 9:16 (mobile portrait), 4:3 (tablet)
+- Card scaling based on viewport
+- HUD repositioning for mobile
+
+#### Task 10.4: Web Export
+**Files:** `export_presets.cfg`
+```ini
+[preset.0]
+name="Web"
+platform="Web"
+vram_texture_compression/for_desktop=true
+vram_texture_compression/for_mobile=true
+html/canvas_resize_policy=2
+html/experimental_virtual_keyboard=false
+```
+
+**Test:** Export, deploy to test server, verify on Chrome/Firefox/Safari
+
+#### Task 10.5: SSL Certificate Deployment
+- Generate Let's Encrypt certs
+- Configure Colyseus server with HTTPS
+- Update `Constants.USE_SSL = true`
+- Verify `wss://` connection from web client
+
+---
+
+### Phase 11: Client-Server Integration (Week 21-22)
+
+#### Task 11.1: Full Round Cycle
+- 4 human-controlled clients + 8 bots
+- Complete 7-round Quick match
+- Verify all phases work end-to-end
+
+**Checklist:**
+- [ ] REVEAL shows correct properties
+- [ ] BID resolves correctly, cards move
+- [ ] INCOME_CALC triggers Visual Ledger
+- [ ] ACTION submits Major/Minor
+- [ ] MOOD/VOTE voting works
+- [ ] DEALS create and resolve
+- [ ] EVENTS display and resolve
+- [ ] PRESS headlines appear
+- [ ] Final rankings correct
+
+#### Task 11.2: Reconnection Flow
+- Player disconnects mid-match
+- 60s reconnection window
+- Bot takes over if timeout
+- Reconnect restores full state
+
+#### Task 11.3: Watcher Mode
+- Join as Watcher (13th+ participant)
+- Read-only state sync
+- Quick Chat enabled (viewer participation)
+- No action/bid/vote capabilities
+
+#### Task 11.4: Error Handling
+- Server sends `ERROR` message → display toast
+- Connection lost → reconnection attempt → failure screen
+- Invalid action → reject with Spanish message
+
+---
+
+### Phase 12: Launch Prep (Week 23-24)
+
+#### Task 12.1: Lobby & Matchmaking
+**Files:** `client/scenes/lobby/`
+- `Lobby.tscn` — Room browser, Quick Play, room code entry
+- Room creation with mode selection (Quick/Standard/Long)
+- Deep link support: `imperio://join/ROOMCODE`
+
+#### Task 12.2: Results & Share
+**Files:** `client/scenes/results/`
+- `Results.tscn` — Final rankings, wealth breakdown
+- `ShareCard.tscn` — Portada generation (per spec D2)
+  - Player name + dynasty
+  - Final rank, wealth, key stat
+  - QR code / deep link
+  - Export as PNG
+
+#### Task 12.3: Asset Placeholders
+- Property card images (25 unique)
+- District map background
+- UI elements (buttons, panels)
+- Audio files (ambient + SFX)
+
+> **Note:** AI-generated assets per Appendix G can be deferred. Use placeholders for testing.
+
+#### Task 12.4: Performance Profiling
+- Frame rate target: 60fps on mid-range mobile
+- Memory usage < 512MB
+- Network bandwidth < 10KB/s steady state
+- Startup time < 5s
+
+#### Task 12.5: Soft Launch Checklist
+- [ ] Web export deployed to staging
+- [ ] SSL configured and working
+- [ ] 12-player stress test passed
+- [ ] All Spanish strings from `locales_es.json`
+- [ ] No placeholder text visible
+- [ ] Analytics hooks (optional)
+
+---
+
 ## Testing Strategy
 
-### Per-Module Testing
+### Server Module Testing
 
 | Module | Strategy | Coverage Target |
 |--------|----------|-----------------|
@@ -295,19 +600,39 @@ RiskScore = 1.0
 | press | Template limits | 85% |
 | room | E2E integration | 80% |
 
+### Client Testing
+
+| Component | Strategy | Verification |
+|-----------|----------|--------------|
+| Card Framework | Manual + GUT | Drag/drop works, containers layout correctly |
+| ImperioClient | Integration | Connect, receive state, send messages |
+| State Sync | Integration | Cards move on ownership change |
+| Phase Panels | Manual | All phases navigable, inputs work |
+| Visual Ledger | Manual | Animation completes, values correct |
+| Mobile Input | Device test | Touch targets, no keyboard issues |
+| Web Export | Browser test | Chrome, Firefox, Safari on desktop + mobile |
+
+**Client Test Tools:**
+- [GUT (Godot Unit Test)](https://github.com/bitwes/Gut) for GDScript unit tests
+- Manual testing for UI/UX flows
+- Browser DevTools for network debugging
+
 ### Test Commands
 ```bash
-# Single module
+# Server: Single module
 npm test -w @imperio/economy
 
-# All modules
+# Server: All modules
 npm test
 
-# Coverage
+# Server: Coverage
 npm test -- --coverage
 
-# E2E only
+# Server: E2E only
 npm test -w @imperio/room -- --testPathPattern=e2e
+
+# Client: Run GUT tests (from Godot editor or CLI)
+godot --headless -s addons/gut/gut_cmdln.gd -gexit
 ```
 
 ---
@@ -316,7 +641,9 @@ npm test -w @imperio/room -- --testPathPattern=e2e
 
 | File | Purpose |
 |------|---------|
-| `imperio_master_spec_v11.md` | Master spec (v12.3), single source of truth |
+| `imperio_master_spec_v11.md` | Master spec (v12.4), single source of truth |
+| `spec_amendments_v12_4.md` | Open source foundation commitments |
+| `plans/open-source-foundation-research.md` | Code audit results for reuse decisions |
 | `graf_dollar.txt` | Ledger schema and accounting rules |
 | `data/properties.json` | 25-property deck |
 | `data/events.json` | 52+ event deck |
@@ -324,15 +651,53 @@ npm test -w @imperio/room -- --testPathPattern=e2e
 | `data/signals.json` | 10 market signals |
 | `data/teams.json` | 17 PARODY + 17 REAL dynasties |
 
+### Open Source Foundations (Spec Appendix O)
+
+| Component | Repository | Action |
+|-----------|------------|--------|
+| Card UI | `chun92/card-framework` | Copy addon to `client/addons/` |
+| WebSocket/SSL | `alpapaydin/Godot4-Multiplayer` | Adapt patterns |
+| Server | Colyseus official starter | `npm create colyseus-app` |
+
 ---
 
 ## Verification
 
+### Server Verification
 1. **Type Safety:** `tsc --noEmit` passes for all packages
 2. **Unit Tests:** `npm test` all green, coverage thresholds met
 3. **Integration:** Full 7-round match completes without errors
 4. **Load Test:** 12 players, <100ms message latency at p99
 5. **Spec Compliance:** Manual audit against spec formulas
+
+### Client Verification
+1. **Framework Integration:** card-framework addon works in Godot 4.5+
+2. **Connection:** WebSocket connects to Colyseus, receives state
+3. **State Sync:** PropertyCards update correctly on state changes
+4. **UI Flow:** All phases navigable, inputs responsive
+5. **Web Export:** Runs in Chrome/Firefox/Safari without errors
+6. **Mobile:** Touch targets work, no input issues
+7. **SSL:** `wss://` connection works in production
+
+---
+
+## Timeline Summary
+
+| Phase | Scope | Weeks | Cumulative |
+|-------|-------|-------|------------|
+| 1-2 | Server Foundation + Economy | 1-4 | 4 weeks |
+| 3 | Game Actions | 5-6 | 6 weeks |
+| 4 | Events + Voting | 7-8 | 8 weeks |
+| 5 | AI + Persistence | 9-10 | 10 weeks |
+| 6 | Server Integration | 11-12 | 12 weeks |
+| 7 | Client Foundation | 13-14 | 14 weeks |
+| 8 | Card UI Integration | 15-16 | 16 weeks |
+| 9 | Match UI | 17-18 | 18 weeks |
+| 10 | Polish + Export | 19-20 | 20 weeks |
+| 11 | Client-Server Integration | 21-22 | 22 weeks |
+| 12 | Launch Prep | 23-24 | 24 weeks |
+
+**Total:** ~24 weeks (6 months) from start to soft launch readiness.
 
 ---
 
@@ -341,3 +706,5 @@ npm test -w @imperio/room -- --testPathPattern=e2e
 After approval:
 1. **Subagent-Driven (this session)** — Fresh subagent per task, review between tasks
 2. **Parallel Session (separate)** — Open new session with executing-plans skill
+3. **Server-First** — Complete Phases 1-6, then start client in parallel
+4. **Vertical Slice** — Build one complete feature (e.g., auction) end-to-end first
