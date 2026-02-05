@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPERIO INMOBILIARIO** — viral multiplayer real estate tycoon game set in Lima, Peru. Players bid on properties, manage portfolios, deal with market shocks, and build dynasties in 7-14 round matches.
 
-**Current Status**: Specification stage (v12.3 finalized). No source code yet — implementation pending.
+**Current Status**: Specification complete (v12.4). Implementation plan ready. No source code yet.
 
 ## Technology Stack
 
 | Layer | Technology |
 |-------|------------|
 | Server | Colyseus (authoritative state, rooms, WebSocket) on Node.js 20+ |
-| Client | Godot 4.x (web export via WebAssembly) |
+| Client | Godot 4.5+ (web export via WebAssembly) + `chun92/card-framework` addon |
 | Database | PostgreSQL (match snapshots as JSONB + Graf Dollar ledger) |
 | Cache | Redis (optional: rate limiting, sessions) |
 | Languages | TypeScript strict mode (server), GDScript/GodotJS (client) |
@@ -22,12 +22,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | File | Purpose |
 |------|---------|
-| `imperio_master_spec_v11.md` | Master spec (v12.3) — ~6400 lines, use offset/limit to read |
+| `imperio_master_spec_v11.md` | Master spec (v12.4) — ~6200 lines, use offset/limit to read |
 | `graf_dollar.txt` | Double-entry ledger schema (PostgreSQL tables, idempotency keys) |
-| `plans/modular-implementation-plan.md` | 14-package server architecture, testing strategy, task breakdown |
+| `plans/modular-implementation-plan.md` | Full implementation plan: 14-package server (Phases 1-6) + Godot client (Phases 7-12) |
+| `plans/open-source-foundation-research.md` | Code audit results for reuse decisions |
 | `data/*.json` | Satellite game data (properties, events, signals, moods, teams, elections, quickchat, locales) |
-| `spec_amendments_v12_*.md` | Changelog for spec versions 12.1-12.3 |
+| `spec_amendments_v12_*.md` | Changelog for spec versions 12.1-12.4 |
 | `skills/gaming-design-bible/` | Skill for auditing game design against industry best practices |
+
+## Open Source Foundations (Committed)
+
+| Component | Repository | License |
+|-----------|------------|---------|
+| Card UI | `chun92/card-framework` | MIT |
+| WebSocket/SSL patterns | `alpapaydin/Godot4-Multiplayer-Survivor-IO-Game` | MIT |
+| Server | Colyseus official starter (`npm create colyseus-app`) | MIT |
+
+See spec Appendix O for integration details.
 
 ## Planned Module Structure (Server)
 
@@ -51,6 +62,27 @@ packages/
 
 Dependency rule: Modules can only depend on same or lower levels. No circular deps.
 
+## Planned Client Structure (Godot 4.5+)
+
+```
+client/
+├── addons/card-framework/   # Copy from chun92/card-framework
+├── autoloads/
+│   ├── Constants.gd         # Server URL, SSL config
+│   ├── ImperioClient.gd     # WebSocket client to Colyseus
+│   └── GameState.gd         # Local state mirror
+├── scenes/
+│   ├── lobby/               # Room browser, Quick Play
+│   ├── match/               # Main game scene
+│   │   ├── phases/          # BidPanel, ActionPanel, DealPanel, etc.
+│   │   └── components/      # PropertyCard, MarketRow, Portfolio, VisualLedger
+│   └── results/             # Final rankings, share card
+├── data/                    # Satellite JSON (synced from server)
+└── assets/                  # Cards, UI, audio, certs
+```
+
+See spec Section 11.2 for full architecture.
+
 ## Development Commands (Planned)
 
 ```bash
@@ -68,11 +100,14 @@ npm test -w @imperio/room -- --testPathPattern=e2e
 
 # Type checking
 tsc --noEmit
+
+# Client: Run GUT tests (from Godot)
+godot --headless -s addons/gut/gut_cmdln.gd -gexit
 ```
 
 ## Master Spec Navigation
 
-The spec (`imperio_master_spec_v11.md`, v12.3) is the single source of truth. Key sections:
+The spec (`imperio_master_spec_v11.md`, v12.4) is the single source of truth. Key sections:
 
 | Section | What You'll Find |
 |---------|------------------|
@@ -155,3 +190,4 @@ Flavor tags: `premium_area`, `corredor_obra`, `zona_caliente`
 | v12.1 | `spec_amendments_v12_1.md` | Critical/High: OpsCost rebalance, leader tax, matchmaking, challenges |
 | v12.2 | `spec_amendments_v12_2.md` | Medium: Property deck fixes, 8 new events, TypeScript interfaces |
 | v12.3 | `spec_amendments_v12_3.md` | Low: Adaptive Visual Ledger timing, dynamic audio layers |
+| v12.4 | `spec_amendments_v12_4.md` | Open source foundations: card-framework, client architecture (250+ lines) |
