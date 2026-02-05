@@ -1,0 +1,14 @@
+{
+  "name": "imperio-inmobiliario-skills",
+  "owner": {
+    "name": "imperio-inmobiliario"
+  },
+  "plugins": [
+    {
+      "name": "gaming-design-bible",
+      "source": "./gaming-design-bible",
+      "description": "Gaming industry best practices, virality patterns, anti-patterns, competitive analysis, and framework guidance for multiplayer game development",
+      "version": "1.0.0"
+    }
+  ]
+}
