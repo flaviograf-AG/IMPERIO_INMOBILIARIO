@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPERIO INMOBILIARIO** — viral multiplayer real estate tycoon game set in Lima, Peru. Players bid on properties, manage portfolios, deal with market shocks, and build dynasties in 7-14 round matches.
 
-**Current Status**: Specification stage (v12.0 finalized). No source code yet — implementation pending.
+**Current Status**: Specification stage (v12.1 finalized). No source code yet — implementation pending.
 
 ## Technology Stack
 
@@ -20,21 +20,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Master Spec Navigation
 
-The spec (`imperio_master_spec_v11.md`, v12.0) is the single source of truth. Key sections:
+The spec (`imperio_master_spec_v11.md`, v12.1) is the single source of truth. Key sections:
 
 | Section | What You'll Find |
 |---------|------------------|
 | Part 1 | Design philosophy, hard constraints |
 | Part 2 | Game modes (Quick/Standard/Long), starting values (GD 500K/650K/800K) |
-| Part 3 | Roles (Owner/Watcher), Quick Chat, identity, viral systems, leaderboard |
+| Part 3 | Roles (Owner/Watcher), Quick Chat, **dynasties (social features)**, viral systems, **challenges**, **streamer mode**, leaderboard |
 | Part 5 | **Core loop, 11-phase state machine, Major/Minor action split, MOOD full spec** |
-| Part 6 | Economy: GD-scale formulas (Wealth/Rent/OpsCost/Package bonuses), forced sales |
-| Part 7 | Actions (Develop/Package/Insure/PR/etc.), 7 Deal templates, Smart Suggestions, Property Packaging |
-| Part 8 | Targeted event system, RiskScore, GD fairness caps (150K max) |
+| Part 6 | Economy: GD-scale formulas (Wealth/Rent/OpsCost/Package bonuses), forced sales, **late-game cash sinks** |
+| Part 7 | Actions (Develop levels 1-5/Package/Insure/PR/etc.), 7 Deal templates + **price validation**, Smart Suggestions, Property Packaging |
+| Part 8 | Targeted event system, RiskScore, GD fairness caps (150K max), **10s player choice window** |
 | Part 13 | **Graf Dollar Metagame: persistent wallet, leaderboard tiers, seasonal decay, dynasty rankings** |
+| Part 14 | **Matchmaking: lobby browser, Quick Play, room codes, deep links, bot-fill rules, ranked ELO** |
 | A1 | TypeScript interfaces — PropertyPackage, MoodOption, QuickChatMessage types |
 | A7 | **25-property deck with GD values (200K-2M range)** |
-| A8 | Bot heuristics with GD thresholds |
+| A8 | Bot heuristics with GD thresholds **(H1-H9 + standardized reserve)** |
 | A9 | Colyseus + Godot integration code examples |
 | B | Complete 52+ event deck with GD cash amounts |
 | F | Networking protocol: PACKAGE, QUICK_CHAT, SELL_PACKAGE messages |
@@ -66,7 +67,8 @@ Server proceeds regardless of client response. Timeouts: no bid = no bid, no act
 Wealth = Cash + Σ(PropertyWorth) - Debt
 PropertyWorth = BasePrice + (UpgradeLevel × 40,000) + WorthBonuses + PackageWorthBonus
 Rent = BaseRent + (UpgradeLevel × 12,000) + DistrictSetBonus + SignalBonus + TempBonus + PackageRentBonus
-OpsCost = floor((NumProperties + TotalUpgrades) / 4) × 8,000
+OpsCost = floor((NumProperties + TotalUpgrades) / 3) × 12,000
+LeaderTax = 5% of TotalRent (top quartile) | 10% of TotalRent (#1 if > 1.2x #2)
 ```
 District set bonus: +GD 5,000 rent per property when 2+ owned in same district.
 
@@ -76,7 +78,7 @@ District set bonus: +GD 5,000 rent per property when 2+ owned in same district.
 - **Ledger**: Double-entry system per `graf_dollar.txt`. Tables: `ledger_tx`, `ledger_entry`, `balance_cache`.
 
 ### Satellite Data Strategy
-Game configuration externalized to `data/` JSON files — allows balance updates without client rebuild. Files: `properties.json` (25 properties), `events.json` (52+ events), `signals.json` (10 market signals), `elections.json` (4 candidates), `moods.json` (8 mood options), `quickchat.json` (12 presets), `teams.json` (17 PARODY + 17 REAL_LABEL dynasties), `locales_es.json` (Spanish UI strings).
+Game configuration externalized to `data/` JSON files — allows balance updates without client rebuild. Files: `properties.json` (25 properties), `events.json` (52+ events), `signals.json` (10 market signals), `elections.json` (4 candidates), `moods.json` (8 mood options), `quickchat.json` (12 presets), `teams.json` (17 PARODY + 17 REAL_LABEL dynasties), `locales_es.json` (Spanish UI strings), `challenges.json` (daily/weekly challenges).
 
 ### Security Model
 - **JIT round seed**: `roundSeed = sha256(matchSeed + serverSecret + roundNumber)` — `serverSecret` NEVER sent to client
