@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPERIO INMOBILIARIO** — viral multiplayer real estate tycoon game set in Lima, Peru. Players bid on properties, manage portfolios, deal with market shocks, and build dynasties in 7-14 round matches.
 
-**Current Status**: Specification stage (v12.2 finalized). No source code yet — implementation pending.
+**Current Status**: Specification stage (v12.3 finalized). No source code yet — implementation pending.
 
 ## Technology Stack
 
@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Master Spec Navigation
 
-The spec (`imperio_master_spec_v11.md`, v12.2) is the single source of truth. Key sections:
+The spec (`imperio_master_spec_v11.md`, v12.3) is the single source of truth. Key sections:
 
 | Section | What You'll Find |
 |---------|------------------|
@@ -39,7 +39,7 @@ The spec (`imperio_master_spec_v11.md`, v12.2) is the single source of truth. Ke
 | A9 | Colyseus + Godot integration code examples |
 | B | Complete 52+ event deck with GD cash amounts |
 | F | Networking protocol: PACKAGE, QUICK_CHAT, SELL_PACKAGE messages |
-| V | Visual spec: "Tycoon Luxury" style, GD currency bills |
+| V | Visual spec: "Tycoon Luxury" style, GD currency bills, **V6.1 dynamic audio layers** |
 
 ## Core Architecture
 
@@ -52,7 +52,7 @@ On election rounds, `VOTE` replaces `MOOD`. Full state: `LOBBY → MATCH_INIT �
 ### Hard Ordering Rule (Part 5.3)
 1. Resolve bids (auction winners)
 2. Apply Income (rent + signals + ops + debt + leader tax)
-3. Visual Ledger animation (4.0s, client-side, server waits)
+3. Visual Ledger animation (adaptive 3.0-5.0s, client-side, server waits)
 4. Collect actions (1 Major + 0-1 Minor)
 5. Resolve Mood/Vote (queued effects)
 6. Resolve deals (post-action ownership is authoritative)
@@ -128,3 +128,11 @@ Envelope: `{ type, payload, ts, idempotencyKey }`. Delta packets (`OP_DELTA`) us
 ## Visual Style
 
 "Tycoon Luxury" — semi-realistic Lima cityscape, high-contrast UI with gold/bronze metallics. Graf Dollar bills in 3 denominations (GD 50K, 100K, 500K). Full visual spec in Appendix V.
+
+## Spec Amendment History
+
+| Version | File | Scope |
+|---------|------|-------|
+| v12.1 | `spec_amendments_v12_1.md` | Critical/High: OpsCost rebalance, leader tax, matchmaking, challenges, streamer mode |
+| v12.2 | `spec_amendments_v12_2.md` | Medium: Property deck fixes, 8 new events, TypeScript interfaces, Colyseus schemas |
+| v12.3 | `spec_amendments_v12_3.md` | Low: Adaptive Visual Ledger timing, dynamic audio layers, Godot 4.x cleanup |
