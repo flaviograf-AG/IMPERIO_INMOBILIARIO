@@ -1,8 +1,27 @@
-# IMPERIO INMOBILIARIO — Unified Master Specification v12.1
+# IMPERIO INMOBILIARIO — Unified Master Specification v12.2
 
-**Version:** 12.1
+**Version:** 12.2
 **Date:** 2026-02-04
-**Status:** Golden Master (v12 + Design Bible Audit Fixes)
+**Status:** Golden Master (v12.1 + Medium Issue Fixes)
+
+---
+
+## CHANGELOG (v12.1 → v12.2)
+
+### Property Deck (A7)
+- P-06 rent: 45,000 → 46,000 (yield 13.14%), district Pueblo Libre → Jesus Maria/Lince
+- P-07 rent: 50,000 → 52,000 (yield 13.00%)
+- P-13 district: Surquillo → Miraflores
+- P-17: Added `turismo` tag
+
+### Event Balance (Appendix B)
+- Added 8 new positive events (E-P04 through E-P11)
+- New ratio: ~76% negative / ~20% positive (was 89%/7%)
+
+### Technical Completeness
+- Added 8 missing TypeScript interfaces to A1 (WatcherState, AuctionBid, BotConfig, etc.)
+- Expanded A9 Colyseus schema with 5 new Schema classes and 12 missing ImperioState fields
+- Added 4 missing F2 message types and 5 missing F3 delta operations
 
 ---
 
@@ -2142,6 +2161,110 @@ type FlavorTag =
   | "zona_caliente";
 
 type PropertyTag = EconomicTag | FlavorTag;
+
+// === NEW INTERFACES (v12.2) ===
+
+/** State for a Watcher participant (non-Owner viewer with limited influence) */
+interface WatcherState {
+  watcherId: Id;
+  handle: string;
+  displayName: string;
+  isAnonymous: boolean;
+  rumorUsed: boolean;
+  bettingState: WatcherBettingState;
+  awardVotes: Record<string, Id>;
+  watcherXP: number;
+  watcherBadge?: "OBSERVADOR" | "ANALISTA" | "EXPERTO";
+}
+
+interface WatcherBettingState {
+  predictedWinnerId: Id | null;
+  propertyId: Id | null;
+  wasCorrect?: boolean;
+}
+
+/** Pending bid during BID phase (sealed, simultaneous) */
+interface AuctionBid {
+  ownerId: Id;
+  propertyId: Id;
+  amount: number;
+  timestamp: number;
+  fameTokenUsed: boolean;
+}
+
+/** Configuration for bot behavior (Tutorial/Autopilot/fill seats) */
+interface BotConfig {
+  difficulty: "EASY" | "NORMAL" | "HARD";
+  cashReserve: number;
+  bidAggressiveness: number;
+  isTutorial: boolean;
+  canInitiateDeals: boolean;
+  evaluatesDeals: boolean;
+}
+
+/** Server-generated contextual deal suggestion */
+interface SmartDealSuggestion {
+  template: DealTemplateId;
+  targetOwnerId: Id;
+  suggestedAmount?: number;
+  propertyId?: Id;
+  packageId?: Id;
+  reason: "COMPLETES_DISTRICT_SET" | "LOW_CASH_NEEDS_LOAN" | "COMPETING_FOR_DISTRICT" | "PACKAGE_SALE_OPPORTUNITY";
+  label_es: string;
+}
+
+/** Infrastructure corridor modifier affecting a district */
+interface InfraModifier {
+  id: Id;
+  type: "METRO_TERMINAL" | "VIA_EXPRESA";
+  name_es: string;
+  affectedDistricts: string[];
+  rentDelta: number;
+  worthDelta: number;
+  duration: number;
+  untilRound: number;
+  enablesExpropriation: boolean;
+}
+
+/** Market signal affecting rent by economic tags */
+interface MarketSignal {
+  id: Id;
+  name_es: string;
+  affectedTags: EconomicTag[];
+  tagMods: Record<string, number>;
+  active: boolean;
+  activatedRound?: number;
+}
+
+/** Per-match election state */
+interface ElectionState {
+  electionRound: number;
+  candidates: Candidate[];
+  contributions: Record<Id, Record<Id, number>>;
+  watcherVotes: Record<Id, number>;
+  winnerId?: Id;
+  bundleDuration: number;
+  effectsUntilRound?: number;
+  isMiniElection: boolean;
+}
+
+/** Progress tracking for daily/weekly/seasonal challenges */
+interface ChallengeProgress {
+  challengeId: Id;
+  tier: "DAILY" | "WEEKLY_DYNASTY" | "SEASONAL";
+  progress: number;
+  target: number;
+  completed: boolean;
+  completedAt?: number;
+  rewardGD: number;
+  bonusReward?: string;
+}
+
+interface DynastyChallengeProgress extends ChallengeProgress {
+  tier: "WEEKLY_DYNASTY";
+  dynastyId: Id;
+  memberContributions: Record<Id, number>;
+}
 ```
 
 ## A2: Deal Engine Rules (Deterministic)
@@ -2292,18 +2415,18 @@ interface Property {
 | P-03 | Lotes Puente Piedra | Independencia/Los Olivos | residencial | 250,000 | 35,000 | 1 |
 | P-04 | Depas Costa Chorrillos | Chorrillos | residencial, costa | 280,000 | 38,000 | 1 |
 | P-05 | Galeria Comercial Centro | Centro | cultura, gobierno | 300,000 | 40,000 | 1 |
-| P-06 | Depas Pueblo Libre | Pueblo Libre | residencial, cultura | 350,000 | 45,000 | 1 |
-| P-07 | Taller Automotriz Chorrillos | Chorrillos | logistica, costa | 400,000 | 50,000 | 1 |
+| P-06 | Depas Pueblo Libre | Jesus Maria/Lince | residencial, cultura | 350,000 | 46,000 | 1 |
+| P-07 | Taller Automotriz Chorrillos | Chorrillos | logistica, costa | 400,000 | 52,000 | 1 |
 | P-08 | Strip Mall Lince | Jesus Maria/Lince | residencial, gobierno | 450,000 | 55,000 | 1 |
 | P-09 | Bodega Industrial Ate | Ate/SJL | logistica | 500,000 | 60,000 | 1 |
 | P-10 | Portafolio Depas San Miguel | Magdalena/San Miguel | residencial, costa | 550,000 | 65,000 | 1 |
 | P-11 | Casona Restaurada Barranco | Barranco | cultura, turismo | 600,000 | 66,000 | 1 |
 | P-12 | Almacen Callao Puerto | Callao | logistica, zona_caliente | 700,000 | 73,000 | 2 |
-| P-13 | Edificio Surquillo | Surquillo | residencial | 750,000 | 75,000 | 2 |
+| P-13 | Edificio Surquillo | Miraflores | residencial | 750,000 | 75,000 | 2 |
 | P-14 | Casa Residencial Surco | Surco | residencial | 800,000 | 76,000 | 2 |
 | P-15 | Loft Artistico Barranco | Barranco | cultura, turismo, costa | 850,000 | 80,000 | 2 |
 | P-16 | Residencial La Molina | La Molina | residencial, premium_area | 900,000 | 82,000 | 2 |
-| P-17 | Depa Vista Mar Miraflores | Miraflores | residencial, costa, premium_area | 1,000,000 | 90,000 | 2 |
+| P-17 | Depa Vista Mar Miraflores | Miraflores | residencial, costa, turismo, premium_area | 1,000,000 | 90,000 | 2 |
 | P-18 | Oficina Miraflores | Miraflores | oficinas, costa | 1,100,000 | 95,000 | 2 |
 | P-19 | Centro Logistico Callao | Callao | logistica, zona_caliente | 1,200,000 | 100,000 | 2 |
 | P-20 | Edificio Residencial Surco | Surco | residencial | 1,300,000 | 104,000 | 2 |
@@ -2525,31 +2648,131 @@ import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 export class OwnerSchema extends Schema {
   @type("string") ownerId: string;
   @type("string") handle: string;
+  @type("string") displayName: string;
+  @type("string") team: string;
+  @type("string") teamSet: string;
+  @type("string") color: string;
   @type("number") cash: number = 500_000;  // GD — set per mode (500K/650K/800K)
   @type("number") debt: number = 0;
   @type("number") fame: number = 0;
   @type("number") compliance: number = 1;
+  @type("number") politicalExposure: number = 0;
+  @type("number") protectedUntilRound: number = 0;
+  @type("boolean") brokePactUsed: boolean = false;
+  @type("boolean") yapeUsed: boolean = false;
+  @type("number") lastTargetedRound: number = 0;
   @type(["string"]) properties = new ArraySchema<string>();
-  @type(["string"]) packages = new ArraySchema<string>();  // v12: package IDs
+  @type(["string"]) packages = new ArraySchema<string>();
+  @type(["string"]) achievements = new ArraySchema<string>();
 }
 
 export class PropertySchema extends Schema {
   @type("string") propertyId: string;
   @type("string") nombre_es: string;
   @type("string") district: string;
+  @type(["string"]) tags = new ArraySchema<string>();
   @type("number") basePrice: number;
   @type("number") baseRent: number;
+  @type("number") upgradeSlotsMax: number = 2;
   @type("number") upgradeLevel: number = 0;
   @type("string") ownerId: string = "";
   @type("string") insurance: string = "NONE";
+  @type("string") buildQuality: string = "STANDARD";
+  @type("string") packageId: string = "";
+  @type("number") tradeLockedUntilRound: number = 0;
 }
 
+// === NEW SCHEMA CLASSES (v12.2) ===
+
+export class PackageSchema extends Schema {
+  @type("string") packageId: string;
+  @type("string") ownerId: string;
+  @type("string") category: string;
+  @type(["string"]) propertyIds = new ArraySchema<string>();
+  @type("number") createdRound: number;
+  @type("number") rentBonusPerProperty: number = 6_000;
+  @type("number") worthBonus: number = 75_000;
+  @type("number") dissolvedRound: number = 0;
+}
+
+export class DealSchema extends Schema {
+  @type("string") dealId: string;
+  @type("string") templateId: string;
+  @type("string") fromOwnerId: string;
+  @type("string") toOwnerId: string;
+  @type("number") createdRound: number;
+  @type("string") status: string = "PENDING";
+  @type("string") fieldsJson: string = "{}";
+  @type("string") counterFieldsJson: string = "";
+  @type("number") scheduledRepayAmount: number = 0;
+  @type("number") scheduledRepayRound: number = 0;
+}
+
+export class MarketSignalSchema extends Schema {
+  @type("string") id: string;
+  @type("string") nombre_es: string;
+  @type("string") tagModsJson: string = "{}";
+}
+
+export class MoodEffectSchema extends Schema {
+  @type("string") id: string;
+  @type("string") nombre_es: string;
+  @type("string") effectType: string;
+  @type("number") delta: number = 0;
+  @type("number") multiplier: number = 1;
+  @type("string") sentiment: string = "NEUTRAL";
+}
+
+export class InfraSchema extends Schema {
+  @type("string") infraId: string;
+  @type("string") district: string;
+  @type("number") untilRound: number;
+  @type("number") rentDelta: number = 5_000;
+  @type("number") worthDelta: number = 100_000;
+  @type("boolean") enablesExpropriation: boolean = false;
+}
+
+// === EXPANDED ImperioState ===
+
 export class ImperioState extends Schema {
+  // Core
+  @type("string") roomId: string;
+  @type("string") mode: string = "STANDARD";
   @type("string") phase: string = "LOBBY";
   @type("number") round: number = 0;
+  @type("number") phaseDeadline: number = 0;
+
+  // Entities
   @type({ map: OwnerSchema }) owners = new MapSchema<OwnerSchema>();
   @type({ map: PropertySchema }) properties = new MapSchema<PropertySchema>();
+  @type({ map: PackageSchema }) packages = new MapSchema<PackageSchema>();
+  @type({ map: DealSchema }) deals = new MapSchema<DealSchema>();
+
+  // Market
   @type(["string"]) marketRow = new ArraySchema<string>();
+  @type({ map: MarketSignalSchema }) marketSignals = new MapSchema<MarketSignalSchema>();
+
+  // Mood
+  @type(["string"]) moodOptions = new ArraySchema<string>();
+  @type("string") activeMoodId: string = "";
+  @type(MoodEffectSchema) activeMoodEffect: MoodEffectSchema;
+
+  // Election
+  @type("boolean") electionActive: boolean = false;
+  @type(["string"]) electionCandidates = new ArraySchema<string>();
+
+  // Spectators
+  @type("number") watcherCount: number = 0;
+
+  // Infrastructure
+  @type({ map: InfraSchema }) infra = new MapSchema<InfraSchema>();
+
+  // Meters (JSON for flexibility)
+  @type("string") metersJson: string = "{}";
+
+  // Press
+  @type("string") pressPersonaId: string = "";
+  @type(["string"]) pressTicker = new ArraySchema<string>();
 }
 ```
 
@@ -3170,6 +3393,113 @@ events:
       rentDuration: 1
     headlines:
       - "Boom turístico beneficia a {DISTRICT}"
+
+  # === NEW POSITIVE EVENTS (v12.2) ===
+
+  - id: E-P04
+    title_es: "Contrato de seguridad exitoso"
+    category: SEGURIDAD
+    type: TARGETED_POSITIVE
+    severity: MEDIUM
+    condition: "owner.hasSecurityContract"
+    effects:
+      cash: 80000
+      fame: 1
+    headlines:
+      - "Seguridad de {PROPERTY} frustra asalto"
+      - "Guardias de {OWNER} capturan delincuentes"
+
+  - id: E-P05
+    title_es: "Inspección impecable"
+    category: LICENCIAS
+    type: TARGETED_POSITIVE
+    severity: LOW
+    condition: "owner.compliance >= 2"
+    effects:
+      cash: 60000
+      compliance: 1
+    headlines:
+      - "Municipio felicita a {OWNER} por cumplimiento"
+      - "{PROPERTY} pasa auditoría con nota perfecta"
+
+  - id: E-P06
+    title_es: "Inversión extranjera"
+    category: INCIDENTES
+    type: TARGETED_POSITIVE
+    severity: HIGH
+    condition: "property.tags.includes('oficinas') || property.tags.includes('logistica')"
+    effects:
+      cash: 100000
+      rentDelta: 15000
+      rentDuration: 2
+    headlines:
+      - "Multinacional elige {PROPERTY} como sede regional"
+      - "Inversión millonaria llega a {DISTRICT}"
+
+  - id: E-P07
+    title_es: "Viral positivo"
+    category: PRENSA
+    type: TARGETED_POSITIVE
+    severity: MEDIUM
+    effects:
+      fame: 2
+      rentDelta: 10000
+      rentDuration: 1
+    headlines:
+      - "{PROPERTY} se vuelve tendencia por razones buenas"
+      - "Influencer elogia a {OWNER} y se hace viral"
+
+  - id: E-P08
+    title_es: "Donación reconocida"
+    category: PRENSA
+    type: TARGETED_POSITIVE
+    severity: MEDIUM
+    condition: "owner.fame >= 3"
+    effects:
+      fame: 2
+      politicalExposure: -1
+    headlines:
+      - "{OWNER} recibe premio por filantropía"
+      - "Fundación {TEAM} inaugura comedor popular"
+
+  - id: E-P09
+    title_es: "Vecinos agradecidos"
+    category: SEGURIDAD
+    type: TARGETED_POSITIVE
+    severity: LOW
+    effects:
+      fame: 1
+      rentDelta: 8000
+      rentDuration: 1
+    headlines:
+      - "Junta vecinal agradece a {OWNER}"
+      - "Comerciantes de {DISTRICT} celebran seguridad"
+
+  - id: E-P10
+    title_es: "Exoneración tributaria"
+    category: LICENCIAS
+    type: TARGETED_POSITIVE
+    severity: HIGH
+    condition: "property.tags.includes('cultura') || property.tags.includes('gobierno')"
+    effects:
+      cash: 120000
+    headlines:
+      - "{PROPERTY} declarado bien de interés cultural"
+      - "SUNAT otorga beneficio fiscal a {OWNER}"
+
+  - id: E-P11
+    title_es: "Contrato gubernamental"
+    category: INCIDENTES
+    type: TARGETED_POSITIVE
+    severity: HIGH
+    condition: "property.tags.includes('gobierno') || property.tags.includes('oficinas')"
+    effects:
+      cash: 100000
+      rentDelta: 20000
+      rentDuration: 2
+    headlines:
+      - "Ministerio alquila {PROPERTY} por 5 años"
+      - "Gobierno firma contrato millonario con {OWNER}"
 ```
 
 ## B2: Infrastructure Modifiers
@@ -3550,6 +3880,9 @@ Character type: {DYNASTY_TYPE}
 | SUBMIT_PACKAGE | { propertyIds, category } | ACTION |
 | SUBMIT_QUICK_CHAT | { phraseId, districtParam? } | Any |
 | REQUEST_SNAPSHOT | { } | Any |
+| TOGGLE_BUSY_MODE | { enabled: boolean } | Any |
+| SUBMIT_FAME_SPEND | { spendType: FameSpendType, eventId?: string } | EVENTS |
+| SET_AUTO_PAY_PREFERENCE | { preferAutoPay: boolean } | LOBBY, ACTION |
 
 ### Server → Client
 
@@ -3575,6 +3908,7 @@ Character type: {DYNASTY_TYPE}
 | PACKAGE_DISSOLVED | { packageId, reason } |
 | QUICK_CHAT_MSG | { fromOwnerId, phraseId, districtParam?, text_es } |
 | DEAL_SUGGESTION | { suggestions: Array<{ templateId, prefilled }> } |
+| AWARD_RESULTS | { awards: Array<{ awardId, winnerId, winnerHandle, voteCount, totalVoters }> } |
 | ERROR | { code, message_es } |
 
 ## F3: Delta Packets (NEW in v10)
@@ -3613,6 +3947,11 @@ Character type: {DYNASTY_TYPE}
 | SET_PACKAGE | propertyId | packageId or "" |
 | ADD_PACKAGE | ownerId | packageId |
 | REMOVE_PACKAGE | ownerId | packageId |
+| SET_POLITICAL_EXPOSURE | ownerId | 0-3 |
+| SET_PROTECTED_UNTIL | ownerId | roundNumber or 0 |
+| SET_MOOD_ACTIVE | "-" | MoodOptionId or "" |
+| SET_METER | meterId | number |
+| SET_TRADE_LOCK | propertyId | roundNumber or 0 |
 
 **Client Handling**:
 1. Apply changes in order

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPERIO INMOBILIARIO** — viral multiplayer real estate tycoon game set in Lima, Peru. Players bid on properties, manage portfolios, deal with market shocks, and build dynasties in 7-14 round matches.
 
-**Current Status**: Specification stage (v12.1 finalized). No source code yet — implementation pending.
+**Current Status**: Specification stage (v12.2 finalized). No source code yet — implementation pending.
 
 ## Technology Stack
 
@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Master Spec Navigation
 
-The spec (`imperio_master_spec_v11.md`, v12.1) is the single source of truth. Key sections:
+The spec (`imperio_master_spec_v11.md`, v12.2) is the single source of truth. Key sections:
 
 | Section | What You'll Find |
 |---------|------------------|
