@@ -1,0 +1,11 @@
+{
+  "name": "gaming-design-bible",
+  "version": "1.0.0",
+  "description": "Gaming industry best practices, virality patterns, anti-patterns, competitive analysis, and framework guidance for multiplayer game development",
+  "skills": [
+    {
+      "name": "gaming-design-bible",
+      "path": "../skills/gaming-design-bible/SKILL.md"
+    }
+  ]
+}
