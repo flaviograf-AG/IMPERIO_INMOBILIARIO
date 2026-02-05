@@ -1,8 +1,34 @@
-# IMPERIO INMOBILIARIO — Unified Master Specification v12.3
+# IMPERIO INMOBILIARIO — Unified Master Specification v12.4
 
-**Version:** 12.3
-**Date:** 2026-02-04
-**Status:** Golden Master (v12.2 + Low Issue Fixes)
+**Version:** 12.4
+**Date:** 2026-02-05
+**Status:** Golden Master (v12.3 + Open Source Foundation Commitments)
+
+---
+
+## CHANGELOG (v12.3 → v12.4)
+
+### Section 1.5: Open Source Foundation Commitments (REPLACED)
+- Changed from "Strategy" (evaluation) to "Commitments" (directive)
+- Added reuse matrix: what to copy vs. build custom
+- Committed to: chun92/card-framework, alpapaydin patterns, Colyseus official starter
+
+### Section 11.2: Client Architecture (EXPANDED)
+- Expanded from 15 lines to 250+ lines
+- Added complete project structure with scene hierarchy
+- Added card-framework integration guide with code examples
+- Added WebSocket client with SSL support (adapted from alpapaydin)
+- Added scene architecture diagram for Match
+- Added state synchronization patterns
+- Added export configuration for Web + Linux
+
+### Appendix O: Open Source Foundation Directives (REPLACED)
+- Changed from evaluation matrix to committed directives
+- O1: Committed foundations (Colyseus, Godot 4.5+, card-framework)
+- O2: Explicitly excluded repositories with reasons
+- O3: License compliance requirements
+- O4: Reuse matrix with integration effort estimates
+- O5: Step-by-step integration guide
 
 ---
 
@@ -162,15 +188,37 @@
 | Currency | Graf Dollar (GD) — prestige leaderboard currency; no in-match advantage from persistent wallet |
 | Match fairness | All players start with identical GD per mode; persistent wallet has zero in-match effect |
 
-## 1.5 Open Source Foundation Strategy
+## 1.5 Open Source Foundation Commitments
 
-This project leverages proven open-source foundations to minimize development risk and maximize code quality. See **Appendix O** for the complete evaluation matrix.
+This project uses the following proven open-source foundations. These are **directives**, not recommendations.
 
-**Primary Stack:**
-- **Server**: Colyseus (authoritative state, rooms, WebSocket)
-- **Client**: Godot 4.x with optional GodotJS for TypeScript
-- **Database**: PostgreSQL
-- **Cache**: Redis (optional, for rate limiting)
+### 1.5.1 Server Foundation
+- **Framework:** Colyseus 0.15+ via `npm create colyseus-app@latest`
+- **Language:** TypeScript strict mode
+- **Rationale:** Authoritative state sync, room architecture, delta compression
+
+### 1.5.2 Client Foundation
+- **Engine:** Godot 4.5+ (GL Compatibility renderer for WebGL2)
+- **Card UI:** `chun92/card-framework` addon (copy to `addons/card-framework/`)
+- **WebSocket:** Custom client adapting patterns from `alpapaydin/Godot4-Multiplayer` for SSL/TLS
+- **Rationale:** MIT-licensed, actively maintained, Godot 4.5+ compatible
+
+### 1.5.3 What We Reuse vs. Build Custom
+
+| Component | Source | Custom Work Required |
+|-----------|--------|---------------------|
+| Card drag/drop UI | chun92/card-framework | Extend for network sync |
+| Card containers (Pile, Hand) | chun92/card-framework | Map to Colyseus schema |
+| WebSocket SSL/TLS setup | alpapaydin patterns | Adapt for Colyseus protocol |
+| Export presets (Web + Linux) | alpapaydin | Copy directly |
+| Colyseus server scaffold | Official starter | Add game logic |
+| 11-phase state machine | Custom | No existing match |
+| Economy formulas | Custom | Spec-specific |
+| Bot heuristics H1-H9 | Custom | Spec-specific |
+| Event targeting/RiskScore | Custom | Spec-specific |
+| Graf Dollar ledger | Custom | Per `graf_dollar.txt` |
+| Visual Ledger animation | Custom | Spec-specific |
+| Share card (Portada) | Custom | Spec-specific |
 
 ---
 
@@ -1585,21 +1633,329 @@ See **Appendix O** for complete evaluation with repository links.
 - Battle-tested WebSocket handling
 - Schema-based state with delta compression
 
-## 11.2 Client Architecture (Godot 4.x)
+## 11.2 Client Architecture (Godot 4.5+)
 
-### 11.2.1 Renderer
-- **Compatibility** renderer for widest device support (WebGL2)
-- Avoid threads
-- Avoid heavy shaders
-- 2D UI-first approach
+### 11.2.1 Engine Configuration
+```
+Godot Version: 4.5+
+Renderer: GL Compatibility (WebGL2 for browser support)
+Export Targets: Web (primary), Linux (dedicated server for development)
+```
 
-### 11.2.2 UI Split
-- **Admin/menus**: Graf Design System tokens + Material Symbols
-- **Match**: "Imperio" aesthetics (newspaper, skyline, district overlays)
+### 11.2.2 Project Structure
+```
+client/
+├── project.godot
+├── addons/
+│   └── card-framework/        # Copy from chun92/card-framework
+│       ├── card.gd
+│       ├── card_container.gd
+│       ├── pile.gd
+│       ├── hand.gd
+│       ├── card_manager.gd
+│       ├── draggable_object.gd
+│       └── ...
+├── autoloads/
+│   ├── Constants.gd           # Server URL, SSL config
+│   ├── ImperioClient.gd       # Colyseus WebSocket client
+│   └── GameState.gd           # Local state mirror
+├── scenes/
+│   ├── lobby/
+│   │   ├── Lobby.tscn
+│   │   └── lobby.gd
+│   ├── match/
+│   │   ├── Match.tscn         # Main match scene
+│   │   ├── match.gd
+│   │   ├── phases/            # Phase-specific UI panels
+│   │   │   ├── BidPanel.tscn
+│   │   │   ├── ActionPanel.tscn
+│   │   │   ├── DealPanel.tscn
+│   │   │   └── ...
+│   │   ├── components/
+│   │   │   ├── PropertyCard.tscn  # Extends card-framework Card
+│   │   │   ├── MarketRow.tscn     # Extends Pile
+│   │   │   ├── Portfolio.tscn     # Extends Hand
+│   │   │   ├── VisualLedger.tscn
+│   │   │   ├── QuickChat.tscn
+│   │   │   └── EventOverlay.tscn
+│   │   └── hud/
+│   │       ├── CashDisplay.tscn
+│   │       ├── PhaseTimer.tscn
+│   │       └── PlayerList.tscn
+│   └── results/
+│       ├── Results.tscn
+│       ├── results.gd
+│       └── ShareCard.tscn     # Portada generation
+├── data/                      # Satellite JSON (synced from server)
+│   ├── properties.json
+│   ├── events.json
+│   └── ...
+└── assets/
+    ├── cards/                 # Property card images
+    ├── ui/                    # UI elements
+    ├── audio/                 # SFX and ambient
+    └── certs/                 # SSL certificates for production
+```
 
-### 11.2.3 Input Handling
-- Mobile text inputs (Profile/Chat) use **HTML DOM Overlays**
-- Avoid Godot/WebGL virtual keyboard issues
+### 11.2.3 Card Framework Integration
+
+The `chun92/card-framework` addon provides:
+- **Card** — Base card with front/back faces, hover effects, drag states
+- **CardContainer** — Base container with undo history
+- **Pile** — Stack layout (for market row, event deck)
+- **Hand** — Fanned layout (for player portfolio)
+- **CardManager** — Orchestrates all cards and containers
+- **DraggableObject** — Mouse interaction state machine (IDLE → HOVERING → HOLDING)
+
+**Imperio Extensions:**
+
+```gdscript
+# scenes/match/components/PropertyCard.gd
+class_name PropertyCard
+extends Card
+
+# Imperio-specific properties synced from Colyseus
+var property_id: String
+var owner_id: String
+var upgrade_level: int = 0
+var is_insured: bool = false
+var package_id: String = ""
+
+# Display GD values
+func update_from_state(property_state: Dictionary):
+    property_id = property_state.get("propertyId", "")
+    owner_id = property_state.get("ownerId", "")
+    upgrade_level = property_state.get("upgradeLevel", 0)
+    is_insured = property_state.get("isInsured", false)
+    # Update visual indicators
+    _update_upgrade_indicator()
+    _update_insurance_badge()
+```
+
+```gdscript
+# scenes/match/components/MarketRow.gd
+class_name MarketRow
+extends Pile
+
+signal property_selected(property_id: String)
+
+func _on_card_pressed(card: Card):
+    if card is PropertyCard:
+        property_selected.emit(card.property_id)
+```
+
+### 11.2.4 WebSocket Client with SSL
+
+Adapted from `alpapaydin/Godot4-Multiplayer-Survivor-IO-Game` patterns:
+
+```gdscript
+# autoloads/Constants.gd
+extends Node
+
+const SERVER_IP := "localhost"
+const PORT := 2567
+const USE_SSL := false  # Set true for production
+const CERT_PATH := "res://assets/certs/fullchain.pem"
+```
+
+```gdscript
+# autoloads/ImperioClient.gd
+extends Node
+
+signal connected
+signal disconnected
+signal state_changed(state: Dictionary)
+signal phase_changed(phase: String, ends_at: int)
+signal error_received(code: String, message: String)
+
+var websocket: WebSocketPeer
+var is_connected: bool = false
+
+func connect_to_server():
+    websocket = WebSocketPeer.new()
+    var url: String
+
+    if Constants.USE_SSL:
+        url = "wss://%s:%d" % [Constants.SERVER_IP, Constants.PORT]
+        # Note: For web exports, browser handles SSL validation
+        # For native builds, load certificate:
+        # var cert = load(Constants.CERT_PATH)
+    else:
+        url = "ws://%s:%d" % [Constants.SERVER_IP, Constants.PORT]
+
+    var error = websocket.connect_to_url(url)
+    if error != OK:
+        push_error("WebSocket connection failed: %d" % error)
+        return error
+    return OK
+
+func _process(_delta):
+    if websocket == null:
+        return
+
+    websocket.poll()
+    var state = websocket.get_ready_state()
+
+    match state:
+        WebSocketPeer.STATE_OPEN:
+            if not is_connected:
+                is_connected = true
+                connected.emit()
+            while websocket.get_available_packet_count() > 0:
+                _handle_packet(websocket.get_packet())
+        WebSocketPeer.STATE_CLOSED:
+            if is_connected:
+                is_connected = false
+                disconnected.emit()
+
+func _handle_packet(data: PackedByteArray):
+    var json_string = data.get_string_from_utf8()
+    var json = JSON.parse_string(json_string)
+    if json == null:
+        return
+
+    match json.get("type", ""):
+        "STATE_SNAPSHOT":
+            state_changed.emit(json.get("payload", {}))
+        "PHASE_CHANGE":
+            phase_changed.emit(json.get("phase", ""), json.get("endsAt", 0))
+        "ERROR":
+            error_received.emit(json.get("code", ""), json.get("message_es", ""))
+        "OP_DELTA":
+            _apply_delta(json.get("changes", []))
+
+func send_message(type: String, payload: Dictionary = {}):
+    if websocket == null or not is_connected:
+        return
+    var message = {"type": type, "payload": payload, "ts": Time.get_unix_time_from_system()}
+    websocket.send_text(JSON.stringify(message))
+
+func send_bid(property_id: String, amount: int, use_fame_token: bool = false):
+    send_message("bid", {
+        "propertyId": property_id,
+        "amount": amount,
+        "useFameToken": use_fame_token
+    })
+
+func send_action(action_type: String, params: Dictionary = {}):
+    send_message("action", {
+        "actionType": action_type,
+        "params": params
+    })
+```
+
+### 11.2.5 Scene Architecture
+
+```
+Match Scene Tree:
+Match (Node2D)
+├── CardManager (from card-framework)
+├── Background
+│   └── DistrictMap
+├── GameArea
+│   ├── MarketRow (Pile) ─── displays state.marketRow
+│   ├── PlayerPortfolios (Control)
+│   │   └── Portfolio_N (Hand) ─── displays owner.properties
+│   └── EventDeck (Pile)
+├── HUD (CanvasLayer)
+│   ├── PhasePanel ─── switches based on state.phase
+│   ├── CashDisplay
+│   ├── PhaseTimer
+│   ├── QuickChat
+│   └── PlayerList
+├── Overlays (CanvasLayer)
+│   ├── VisualLedger
+│   ├── DealPanel
+│   ├── EventOverlay
+│   └── AuctionOverlay
+└── Audio
+    ├── AmbientPlayer
+    └── SFXPlayer
+```
+
+### 11.2.6 State Synchronization Pattern
+
+```gdscript
+# scenes/match/match.gd
+extends Node2D
+
+@onready var card_manager: CardManager = $CardManager
+@onready var market_row: MarketRow = $GameArea/MarketRow
+var property_cards: Dictionary = {}  # property_id -> PropertyCard
+
+func _ready():
+    ImperioClient.state_changed.connect(_on_state_changed)
+    ImperioClient.phase_changed.connect(_on_phase_changed)
+
+func _on_state_changed(state: Dictionary):
+    # Update market row
+    var market_properties = state.get("marketRow", [])
+    for prop_id in market_properties:
+        if prop_id not in property_cards:
+            _create_property_card(prop_id, state.get("properties", {}).get(prop_id, {}))
+        var card = property_cards[prop_id]
+        if card.get_parent() != market_row.cards_node:
+            market_row.add_card(card)
+
+    # Update player portfolios
+    for owner_id in state.get("owners", {}).keys():
+        var owner = state.owners[owner_id]
+        var portfolio = _get_portfolio(owner_id)
+        for prop_id in owner.get("properties", []):
+            var card = property_cards.get(prop_id)
+            if card and card.get_parent() != portfolio.cards_node:
+                portfolio.add_card(card)
+
+func _create_property_card(prop_id: String, prop_state: Dictionary):
+    var card_scene = preload("res://scenes/match/components/PropertyCard.tscn")
+    var card = card_scene.instantiate()
+    card.property_id = prop_id
+    card.update_from_state(prop_state)
+    property_cards[prop_id] = card
+```
+
+### 11.2.7 Mobile Input
+
+Per original spec, use HTML DOM overlays for text input:
+- Profile name entry
+- Chat messages
+- Room code entry
+
+All other inputs use touch-friendly controls:
+- Bid amounts: Preset buttons (+50K, +100K, +500K)
+- Property selection: Tap on card
+- Quick Chat: 12 preset buttons
+- Deal creation: Template-based dropdowns
+
+### 11.2.8 Export Configuration
+
+Based on `alpapaydin` patterns:
+
+```ini
+# export_presets.cfg
+[preset.0]
+name="Web"
+platform="Web"
+runnable=true
+custom_features=""
+export_filter="all_resources"
+include_filter="*.crt, *.pem"
+
+[preset.0.options]
+vram_texture_compression/for_desktop=true
+vram_texture_compression/for_mobile=true
+html/canvas_resize_policy=2
+html/experimental_virtual_keyboard=false
+progressive_web_app/enabled=false
+
+[preset.1]
+name="Linux Server"
+platform="Linux/X11"
+runnable=true
+custom_features="dedicated_server"
+export_filter="all_resources"
+include_filter="*.crt, *.pem"
+```
 
 ## 11.3 Server Architecture (Node.js + Colyseus)
 
@@ -4564,423 +4920,93 @@ mobile game reward icon style, premium feel --ar 1:1
 
 ---
 
-# APPENDIX O: OPEN SOURCE FOUNDATIONS (NEW in v11)
+# APPENDIX O: OPEN SOURCE FOUNDATION DIRECTIVES
 
-## O1: Server Framework Evaluation
+## O1: Committed Foundations
 
-| Repository | Stars | License | Pros | Cons | Fit |
-|------------|-------|---------|------|------|-----|
-| [colyseus/colyseus](https://github.com/colyseus/colyseus) | 5k+ | MIT | Authoritative state, rooms, TypeScript native, delta sync | Smaller community than Nakama | ⭐ **BEST** |
-| [heroiclabs/nakama](https://github.com/heroiclabs/nakama) | 9k+ | Apache 2.0 | Matchmaking, leaderboards, more infra | Go-based, heavier setup | Good |
-| [boardgameio/boardgame.io](https://github.com/boardgameio/boardgame.io) | 10k+ | MIT | Turn-based focused, good abstractions | React-centric, less flexible | Good |
+These are the **required** open source foundations for Imperio Inmobiliario.
 
-**Recommendation**: Colyseus for core server
+### O1.1 Server
+| Component | Repository | Version | License | Action |
+|-----------|------------|---------|---------|--------|
+| Framework | [colyseus/colyseus](https://github.com/colyseus/colyseus) | 0.15+ | MIT | Use official starter |
+| Starter | `npm create colyseus-app@latest` | Latest | MIT | Initialize project |
 
-### Why Colyseus
-1. **Authoritative State**: Built-in state synchronization with schema validation
-2. **Room Architecture**: Matches our game room concept exactly
-3. **TypeScript Native**: Same language as our server codebase
-4. **Delta Compression**: Efficient state updates out of the box
-5. **WebSocket Handling**: Battle-tested reconnection and session management
+### O1.2 Client
+| Component | Repository | Version | License | Action |
+|-----------|------------|---------|---------|--------|
+| Engine | [godotengine/godot](https://github.com/godotengine/godot) | 4.5+ | MIT | Primary platform |
+| Card UI | [chun92/card-framework](https://github.com/chun92/card-framework) | 1.3.1+ | MIT | Copy addon to project |
+| WebSocket patterns | [alpapaydin/Godot4-Multiplayer-Survivor-IO-Game](https://github.com/alpapaydin/Godot4-Multiplayer-Survivor-IO-Game) | Reference | MIT | Adapt SSL/export code |
 
-## O2: Client Framework Evaluation
+### O1.3 Database
+| Component | Technology | Notes |
+|-----------|------------|-------|
+| Primary | PostgreSQL 15+ | Match snapshots, GD ledger |
+| Cache | Redis (optional) | Rate limiting, sessions |
 
-| Repository | License | Pros | Cons | Fit |
-|------------|---------|------|------|-----|
-| [godotengine/godot](https://github.com/godotengine/godot) | MIT | Full engine, Web export, active community | Learning curve | ⭐ **PRIMARY** |
-| [GodotJS](https://godotjs.github.io/) | MIT | TypeScript in Godot | Early stage | Good addon |
-| [db0/godot-card-game-framework](https://github.com/db0/godot-card-game-framework) | AGPL3 | Card UI components | AGPL license | Reference only |
-| [chun92/card-framework](https://github.com/chun92/card-framework) | MIT | Godot 4.x cards | Limited features | Good starting point |
+## O2: Excluded Repositories
 
-### Useful References
+The following were evaluated and **explicitly excluded**:
 
-| Repository | Use For |
-|------------|---------|
-| [AnicetNgrt/GodotOnlineRoomSystem](https://github.com/AnicetNgrt/GodotOnlineRoomSystem) | Room boilerplate |
-| [Connorvangraan/PropertyTycoon](https://github.com/Connorvangraan/PropertyTycoon) | Monopoly-like mechanics |
-| [gamescomputersplay/monopoly](https://github.com/gamescomputersplay/monopoly) | Simulation logic |
+| Repository | Reason for Exclusion |
+|------------|---------------------|
+| sominator/colyseus-2d-card-game-templates | UNLICENSED, Godot 3.x, minimal value |
+| db0/godot-card-game-framework | AGPL-3 license (copyleft incompatible) |
+| gsioteam/godot-colyseus | Unclear Godot 4.x compatibility, low activity |
 
-## O3: License Compatibility
+## O3: License Compliance
 
-| License | Commercial Use | Modifications | Distribution | Patent Grant |
-|---------|----------------|---------------|--------------|--------------|
-| MIT | ✅ | ✅ | ✅ | ❌ |
-| Apache 2.0 | ✅ | ✅ | ✅ | ✅ |
-| AGPL3 | ⚠️ (copyleft) | ✅ | ⚠️ (source required) | ✅ |
+All committed foundations use MIT license. Compliance requirements:
+1. Include MIT license text in distribution
+2. Preserve copyright notices in source files
+3. No additional restrictions
 
-**Guidance**:
-- Prefer MIT/Apache 2.0 for code you'll modify
-- AGPL3 is fine for reference/inspiration only
-- Always include license notices in distribution
+## O4: Reuse Matrix
 
-## O4: Integration Code Examples
+| Imperio Component | Foundation Source | Integration Effort |
+|-------------------|-------------------|-------------------|
+| Card rendering | card-framework/card.gd | Low (extend class) |
+| Card drag/drop | card-framework/draggable_object.gd | Low (use as-is) |
+| Portfolio layout | card-framework/hand.gd | Low (extend class) |
+| Market row | card-framework/pile.gd | Low (extend class) |
+| Card manager | card-framework/card_manager.gd | Medium (add network events) |
+| WebSocket connection | alpapaydin/Multihelper.gd | Medium (adapt for Colyseus) |
+| SSL/TLS setup | alpapaydin/Constants.gd | Low (copy pattern) |
+| Export presets | alpapaydin/export_presets.cfg | Low (copy and modify) |
+| Colyseus room | Official examples | Medium (add game logic) |
+| State schema | Custom | High (spec-specific) |
+| Phase state machine | Custom | High (no existing match) |
+| Economy formulas | Custom | High (spec-specific) |
 
-### Colyseus Room Setup (Server)
+## O5: Integration Steps
 
-```typescript
-// server/src/rooms/ImperioRoom.ts
-import { Room, Client, Delayed } from "colyseus";
-import { ImperioState, OwnerSchema, PropertySchema } from "./schema";
-
-export class ImperioRoom extends Room<ImperioState> {
-  maxClients = 20;
-
-  // Phase timing
-  private phaseTimer: Delayed;
-
-  onCreate(options: { mode: "QUICK" | "STANDARD" | "LONG" }) {
-    this.setState(new ImperioState());
-    this.state.mode = options.mode;
-
-    // Configure based on mode
-    const config = this.getModeConfig(options.mode);
-    this.state.maxRounds = config.rounds;
-
-    // Set up message handlers
-    this.onMessage("bid", this.handleBid.bind(this));
-    this.onMessage("action", this.handleAction.bind(this));
-    this.onMessage("deal_offer", this.handleDealOffer.bind(this));
-    this.onMessage("deal_response", this.handleDealResponse.bind(this));
-    this.onMessage("mood_vote", this.handleMoodVote.bind(this));
-    this.onMessage("election_vote", this.handleElectionVote.bind(this));
-
-    // Start match when ready
-    this.onMessage("start_match", this.startMatch.bind(this));
-  }
-
-  onJoin(client: Client, options: any) {
-    if (this.state.owners.size < 12) {
-      // Add as Owner
-      const owner = new OwnerSchema();
-      owner.ownerId = client.sessionId;
-      owner.handle = options.handle || `Player${this.state.owners.size + 1}`;
-      owner.team = options.team || this.getRandomTeam();
-      owner.cash = this.getStartingCash();
-      this.state.owners.set(client.sessionId, owner);
-    } else {
-      // Add as Watcher
-      this.state.watcherCount++;
-    }
-  }
-
-  async onLeave(client: Client, consented: boolean) {
-    const owner = this.state.owners.get(client.sessionId);
-    if (owner) {
-      if (!consented) {
-        // Allow reconnection for 60 seconds
-        try {
-          await this.allowReconnection(client, 60);
-          return;
-        } catch (e) {
-          // Reconnection failed, enable autopilot
-          owner.isBot = true;
-        }
-      } else {
-        this.state.owners.delete(client.sessionId);
-      }
-    } else {
-      this.state.watcherCount--;
-    }
-  }
-
-  private handleBid(client: Client, data: { propertyId: string; amount: number; useFameToken?: boolean }) {
-    if (this.state.phase !== "BID") {
-      client.send("error", { code: "WRONG_PHASE", message_es: "No es momento de pujar" });
-      return;
-    }
-
-    const owner = this.state.owners.get(client.sessionId);
-    if (!owner) return;
-
-    if (data.amount > owner.cash) {
-      client.send("error", { code: "INSUFFICIENT_CASH", message_es: "No te alcanza, causa." });
-      return;
-    }
-
-    // Record bid (resolve at phase end)
-    this.state.pendingBids.set(client.sessionId, {
-      propertyId: data.propertyId,
-      amount: data.amount,
-      useFameToken: data.useFameToken || false
-    });
-  }
-
-  private transitionToPhase(phase: string, duration: number) {
-    this.state.phase = phase;
-    this.state.phaseEndsAt = Date.now() + duration;
-
-    // Broadcast phase change
-    this.broadcast("phase_change", {
-      phase,
-      endsAt: this.state.phaseEndsAt,
-      roundSeed: phase === "REVEAL" ? this.state.roundSeed : undefined
-    });
-
-    // Schedule next phase
-    this.phaseTimer = this.clock.setTimeout(() => {
-      this.processPhaseEnd(phase);
-    }, duration);
-  }
-
-  private getModeConfig(mode: string) {
-    const configs = {
-      QUICK: { rounds: 7, bidTime: 25000, actionTime: 25000 },
-      STANDARD: { rounds: 10, bidTime: 35000, actionTime: 35000 },
-      LONG: { rounds: 14, bidTime: 40000, actionTime: 40000 }
-    };
-    return configs[mode] || configs.STANDARD;
-  }
-}
+### Step 1: Initialize Server
+```bash
+npm create colyseus-app@latest imperio-server
+cd imperio-server
+npm install
 ```
 
-### Godot Client Connection (GDScript)
-
-```gdscript
-# client/scripts/network/ImperioClient.gd
-extends Node
-
-class_name ImperioClient
-
-signal connected
-signal disconnected
-signal phase_changed(phase: String, ends_at: int)
-signal state_updated(state: Dictionary)
-signal error_received(code: String, message: String)
-
-var websocket: WebSocketPeer
-var server_url: String = "ws://localhost:2567"
-var room_id: String = ""
-var session_id: String = ""
-var last_seq: int = 0
-
-func _ready():
-    websocket = WebSocketPeer.new()
-
-func _process(_delta):
-    websocket.poll()
-
-    var state = websocket.get_ready_state()
-    if state == WebSocketPeer.STATE_OPEN:
-        while websocket.get_available_packet_count():
-            _handle_packet(websocket.get_packet().get_string_from_utf8())
-    elif state == WebSocketPeer.STATE_CLOSED:
-        emit_signal("disconnected")
-
-func join_room(room: String, options: Dictionary = {}):
-    room_id = room
-    var url = "%s/%s" % [server_url, room]
-    var err = websocket.connect_to_url(url)
-    if err != OK:
-        push_error("Failed to connect: %d" % err)
-        return
-
-    # Send join message once connected
-    await get_tree().create_timer(0.5).timeout
-    _send({
-        "type": "join",
-        "options": options
-    })
-
-func submit_bid(property_id: String, amount: int, use_fame_token: bool = false):
-    _send({
-        "type": "bid",
-        "propertyId": property_id,
-        "amount": amount,
-        "useFameToken": use_fame_token
-    })
-
-func submit_action(action_type: String, params: Dictionary = {}):
-    _send({
-        "type": "action",
-        "actionType": action_type,
-        "params": params
-    })
-
-func submit_deal_offer(template_id: String, to_owner_id: String, fields: Dictionary):
-    _send({
-        "type": "deal_offer",
-        "templateId": template_id,
-        "toOwnerId": to_owner_id,
-        "fields": fields
-    })
-
-func submit_deal_response(deal_id: String, accept: bool, counter_fields: Dictionary = {}):
-    _send({
-        "type": "deal_response",
-        "dealId": deal_id,
-        "response": "ACCEPTED" if accept else "REJECTED",
-        "counterFields": counter_fields
-    })
-
-func _send(data: Dictionary):
-    var json = JSON.stringify(data)
-    websocket.send_text(json)
-
-func _handle_packet(data: String):
-    var json = JSON.parse_string(data)
-    if json == null:
-        push_error("Invalid JSON: %s" % data)
-        return
-
-    match json.get("type", ""):
-        "joined":
-            session_id = json.sessionId
-            emit_signal("connected")
-
-        "phase_change":
-            emit_signal("phase_changed", json.phase, json.endsAt)
-
-        "state_snapshot":
-            emit_signal("state_updated", json.payload)
-
-        "OP_DELTA":
-            _apply_delta(json)
-
-        "error":
-            emit_signal("error_received", json.code, json.message_es)
-
-func _apply_delta(delta: Dictionary):
-    if delta.seq <= last_seq:
-        return  # Ignore old deltas
-
-    if delta.seq > last_seq + 1:
-        # Gap detected, request full snapshot
-        _send({"type": "request_snapshot"})
-        return
-
-    last_seq = delta.seq
-
-    # Apply changes (implementation depends on your state structure)
-    for change in delta.changes:
-        _apply_change(change)
-
-    emit_signal("state_updated", {})  # Trigger UI refresh
-
-func _apply_change(change: Dictionary):
-    # Override in subclass or use signals
-    pass
+### Step 2: Initialize Godot Client
+```bash
+# Create Godot 4.5+ project
+# Download card-framework from Asset Library or GitHub
+# Copy to addons/card-framework/
 ```
 
-### Visual Ledger Animation (GDScript)
+### Step 3: Configure Card Framework
+1. Instance `card_manager.tscn` in Match scene
+2. Create `PropertyCard` extending `Card`
+3. Create `MarketRow` extending `Pile`
+4. Create `Portfolio` extending `Hand`
+5. Connect to `ImperioClient` signals
 
-```gdscript
-# client/scripts/ui/VisualLedger.gd
-extends Control
-
-class_name VisualLedger
-
-@onready var income_container: VBoxContainer = $Panel/IncomeContainer
-@onready var costs_container: VBoxContainer = $Panel/CostsContainer
-@onready var total_label: Label = $Panel/TotalLabel
-@onready var cash_counter: Label = $Panel/CashCounter
-@onready var animation_player: AnimationPlayer = $AnimationPlayer
-
-var income_items: Array[Dictionary] = []
-var cost_items: Array[Dictionary] = []
-var total_delta: int = 0
-var starting_cash: int = 0
-var final_cash: int = 0
-
-signal animation_complete
-
-func show_ledger(data: Dictionary):
-    # Parse income data
-    income_items = data.get("income", [])
-    cost_items = data.get("costs", [])
-    total_delta = data.get("total", 0)
-    starting_cash = data.get("startingCash", 0)
-    final_cash = data.get("finalCash", 0)
-
-    # Clear containers
-    _clear_container(income_container)
-    _clear_container(costs_container)
-
-    # Show panel
-    visible = true
-    modulate.a = 0
-
-    # Start animation sequence
-    _animate_sequence()
-
-func _animate_sequence():
-    # Fade in
-    var tween = create_tween()
-    tween.tween_property(self, "modulate:a", 1.0, 0.3)
-    await tween.finished
-
-    # Animate income items (staggered)
-    for item in income_items:
-        await _add_income_item(item)
-        await get_tree().create_timer(0.2).timeout
-
-    await get_tree().create_timer(0.3).timeout
-
-    # Animate cost items (staggered)
-    for item in cost_items:
-        await _add_cost_item(item)
-        await get_tree().create_timer(0.2).timeout
-
-    await get_tree().create_timer(0.3).timeout
-
-    # Show total with emphasis
-    _show_total()
-    await get_tree().create_timer(0.5).timeout
-
-    # Animate cash counter
-    await _animate_cash_counter()
-
-    await get_tree().create_timer(0.5).timeout
-
-    # Fade out
-    var fade_out = create_tween()
-    fade_out.tween_property(self, "modulate:a", 0.0, 0.3)
-    await fade_out.finished
-
-    visible = false
-    emit_signal("animation_complete")
-
-func _add_income_item(item: Dictionary):
-    var label = Label.new()
-    label.text = "%s: +$%d" % [item.name, item.amount]
-    label.add_theme_color_override("font_color", Color.GREEN)
-    label.modulate.a = 0
-    income_container.add_child(label)
-
-    var tween = create_tween()
-    tween.tween_property(label, "modulate:a", 1.0, 0.15)
-
-func _add_cost_item(item: Dictionary):
-    var label = Label.new()
-    label.text = "%s: -$%d" % [item.name, item.amount]
-    label.add_theme_color_override("font_color", Color.RED)
-    label.modulate.a = 0
-    costs_container.add_child(label)
-
-    var tween = create_tween()
-    tween.tween_property(label, "modulate:a", 1.0, 0.15)
-
-func _show_total():
-    var color = Color.GREEN if total_delta >= 0 else Color.RED
-    var sign = "+" if total_delta >= 0 else ""
-    total_label.text = "TOTAL: %s$%d" % [sign, total_delta]
-    total_label.add_theme_color_override("font_color", color)
-
-    # Scale punch effect
-    total_label.scale = Vector2(1.3, 1.3)
-    var tween = create_tween()
-    tween.tween_property(total_label, "scale", Vector2.ONE, 0.2).set_ease(Tween.EASE_OUT)
-
-func _animate_cash_counter():
-    var tween = create_tween()
-    tween.tween_method(_update_cash_display, starting_cash, final_cash, 0.5)
-
-func _update_cash_display(value: int):
-    cash_counter.text = "$%d" % value
-
-func _clear_container(container: Container):
-    for child in container.get_children():
-        child.queue_free()
-```
+### Step 4: SSL for Production
+1. Generate Let's Encrypt certificates
+2. Place in `assets/certs/`
+3. Set `Constants.USE_SSL = true`
+4. Configure Colyseus server with certificates
 
 ---
 
